@@ -2,6 +2,9 @@
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+py-modules = []
+
 [project]
 name = "garvis-backend"
 version = "0.1.0"
@@ -11,6 +14,10 @@ dependencies = [
   "uvicorn[standard]>=0.27",
   "pydantic>=2.6",
   "python-dotenv>=1.0",
+  "faker",
+  "numpy",
+  "pandas",
+  "duckdb"
 ]
 
 [project.optional-dependencies]
