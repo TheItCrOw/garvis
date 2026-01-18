@@ -5,12 +5,13 @@ We use the faker package for that.
 
 from __future__ import annotations
 
+import duckdb
 import numpy as np
 import os
-import duckdb
 import pandas as pd
-from faker import Faker
+
 from datetime import date, timedelta
+from faker import Faker
 from pathlib import Path
 
 

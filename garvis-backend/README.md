@@ -19,10 +19,11 @@ uv run main.py
 python run main.py
 ```
 
-To see current endponts
+To see current documentation
 
 ```
 http://127.0.0.1:8000/docs
+http://127.0.0.1:8000/redoc
 ```
 
 
