@@ -8,6 +8,10 @@ app.include_router(health_router, prefix="/api")
 ds = DataService()
 print("Total Patients", ds.count_patients())
 
+@app.get("/hello-world")
+def hello_word():
+    return {"message": "Hello World from Team Bierbingka!"}
+
 @app.get("/")
 def root():
     return {"name": "garvis-backend", "status": "ok"}

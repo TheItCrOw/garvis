@@ -11,11 +11,20 @@ python -m pip install -U pip
 pip install -e ".[dev]"
 ```
 
-once you've done this, you can run the backend server:
+once you've done this
 
 ```
-python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+uv run main.py
+#or 
+python run main.py
 ```
+
+To see current endponts
+
+```
+http://127.0.0.1:8000/docs
+```
+
 
 To run potential tests:
 

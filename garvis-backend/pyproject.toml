@@ -17,7 +17,11 @@ dependencies = [
   "faker",
   "numpy",
   "pandas",
-  "duckdb"
+  "duckdb",
+  "fastapi-users[sqlalchemy]",
+  "imagekitio",
+  "aiosqlite",
+  "uv"
 ]
 
 [project.optional-dependencies]
