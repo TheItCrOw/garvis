@@ -19,7 +19,7 @@ dependencies = [
   "pandas",
   "duckdb",
   "fastapi-users[sqlalchemy]",
-  "imagekitio",
+  "imagekitio==4.2.0",
   "aiosqlite",
   "uv"
 ]
