@@ -22,7 +22,9 @@ dependencies = [
   "imagekitio==4.2.0",
   "aiosqlite",
   "uv",
-  "streamlit==1.53"
+  "streamlit==1.53",
+  "google-cloud-speech",
+  "janus"
 ]
 
 [project.optional-dependencies]
