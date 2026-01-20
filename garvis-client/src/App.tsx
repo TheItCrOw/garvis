@@ -1,16 +1,24 @@
-import { useState } from "react";
-import logo from "./assets/logo.png";
-import "./App.css";
+import { Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar/Navbar";
+import Home from "./components/Home/Home";
+
+function About() {
+  return <div className="container mt-4">About Garvis</div>;
+}
+
+function Settings() {
+  return <div className="container mt-4">Settings</div>;
+}
 
 function App() {
-  //const [count, setCount] = useState(0);
-
   return (
     <>
-      <div className="container">
-        <h1>Garvis</h1>
-        <img src={logo} />
-      </div>
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/settings" element={<Settings />} />
+      </Routes>
     </>
   );
 }
