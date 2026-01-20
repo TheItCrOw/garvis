@@ -8,14 +8,9 @@ import os
 from typing import TypedDict
 from langgraph.graph import StateGraph, END
 from langchain_openai import ChatOpenAI
-
-#from langchain.prompts import ChatPromptTemplate #old implementation
-#from langchain_core.prompts import ChatPromptTemplate
-#from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
-
 
 # Define state structure
 class ConversationState(TypedDict):
