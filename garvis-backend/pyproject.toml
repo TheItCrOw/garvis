@@ -21,7 +21,9 @@ dependencies = [
   "fastapi-users[sqlalchemy]",
   "imagekitio",
   "aiosqlite",
-  "uv"
+  "uv",
+  "google-cloud-speech",
+  "janus"
 ]
 
 [project.optional-dependencies]

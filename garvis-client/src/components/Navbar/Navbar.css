@@ -1,0 +1,14 @@
+nav {
+  border-bottom: lightgray 1px solid;
+  box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+}
+
+nav .nav-link {
+  border-radius: 6px;
+  border: lightgray 1px solid;
+  margin-left: 6px;
+  margin-right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
