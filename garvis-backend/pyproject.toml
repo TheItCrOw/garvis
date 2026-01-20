@@ -19,11 +19,10 @@ dependencies = [
   "pandas",
   "duckdb",
   "fastapi-users[sqlalchemy]",
-  "imagekitio",
+  "imagekitio==4.2.0",
   "aiosqlite",
   "uv",
-  "google-cloud-speech",
-  "janus"
+  "streamlit==1.53"
 ]
 
 [project.optional-dependencies]
