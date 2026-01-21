@@ -25,3 +25,7 @@ dist/
 .DS_Store
 .idea/
 .vscode/
+
+#user-specific
+./test.db
+./uv.lock
