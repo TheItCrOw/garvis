@@ -19,11 +19,6 @@ once you've done this
 uv run main.py
 #or 
 python main.py
-
-[FOR FRONTEND]
-uv run streamlit run frontend.py
-#or 
-streamlit run frontend.py --server.port 8501
 ```
 
 To see current backend documentation
@@ -32,9 +27,6 @@ To see current backend documentation
 [BACKEND]
 http://127.0.0.1:8000/docs
 http://127.0.0.1:8000/redoc
-
-[STREAMLIT]
-http://localhost:8501
 ```
 
 

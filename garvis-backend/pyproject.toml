@@ -19,7 +19,6 @@ dependencies = [
   "pandas",
   "duckdb",
   "uv",
-  "streamlit==1.53",
   "google-cloud-speech",
   "janus"
 ]
