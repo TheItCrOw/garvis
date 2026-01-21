@@ -29,3 +29,4 @@ dist/
 #user-specific
 ./test.db
 ./uv.lock
+./;anggraph-lab/root/
