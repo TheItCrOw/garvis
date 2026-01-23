@@ -2,7 +2,6 @@
 cd /root && mkdir -p langgraph-lab && cd langgraph-lab
 python3 -m venv venv && source venv/bin/activate
 
-
 #conda here
 #conda remove -n langgraph-lab --all
 #conda create -n langgraph-lab python=3.12.12 -y
@@ -13,13 +12,13 @@ python3 -m venv venv && source venv/bin/activate
 uv pip install langgraph langchain langchain-core langchain-community
 
 # LLM Providers and State Management
-uv pip install langchain-openai langgraph-checkpoint langchain-prompts
+uv pip install langchain-openai langgraph-checkpoint langchain-prompts langchain-chroma
 
 # Research Tools and Utilities (DuckDuckGo is FREE - no API key!)
 uv pip install ddgs beautifulsoup4 requests python-dotenv pydantic typing-extensions
 
 uv pip install python-dotenv
 
-uv pip install streamlit
+uv pip install streamlit pypdf
 
 echo "LANGGRAPH_INSTALLED" > /root/langgraph-ready.txt
