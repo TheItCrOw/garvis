@@ -19,6 +19,6 @@ uv pip install ddgs beautifulsoup4 requests python-dotenv pydantic typing-extens
 
 uv pip install python-dotenv
 
-uv pip install streamlit pypdf
+uv pip install streamlit pypdf duckdb tabulate pygraphviz
 
 echo "LANGGRAPH_INSTALLED" > /root/langgraph-ready.txt

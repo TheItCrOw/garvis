@@ -13,9 +13,7 @@ from langgraph.prebuilt import ToolNode
 
 load_dotenv()
 
-#llm and embedding model should be compatible
 llm = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0)
-#llm = ChatOpenAI(model="gpt-4o", temperature=0)
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small") #text-embedding-3-large
 pdf_path = "./data/Stock_Market_Performance_2024.pdf"
 

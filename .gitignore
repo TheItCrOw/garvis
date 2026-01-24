@@ -2,6 +2,10 @@
 garvis-backend/uv.lock
 
 langgraph-lab/root/
+langgraph-lab/01. control-flow/*.ipynb_checkpoints
+langgraph-lab/02. agents/*.ipynb_checkpoints
 langgraph-lab/02. agents/logs/
 langgraph-lab/02. agents/data/
 langgraph-lab/02. agents/vectorized_data/
+
+.env
