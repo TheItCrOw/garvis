@@ -1,0 +1,30 @@
+from dataclasses import dataclass
+from typing import Any, Dict
+
+
+@dataclass
+class WsStartContent:
+    format: str
+    sampleRate: int
+    channels: int
+    interimResults: bool
+    languageCode: str
+
+    def to_json(self) -> Dict[str, Any]:
+        return {
+            "format": self.format,
+            "sampleRate": self.sampleRate,
+            "channels": self.channels,
+            "interimResults": self.interimResults,
+            "languageCode": self.languageCode,
+        }
+
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]) -> "WsStartContent":
+        return cls(
+            format=data["format"],
+            sampleRate=data["sampleRate"],
+            channels=data["channels"],
+            interimResults=data["interimResults"],
+            languageCode=data["languageCode"],
+        )

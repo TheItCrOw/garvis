@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useRef, useState } from "react";
+import { createWsMessage, WsMessageType } from "../models/websocket/message";
+import { createWsStartContent } from "../models/websocket/startContent";
 
 type UsePushToTalkOptions = {
     wsUrl: string; // websocket backend, e.g. "ws://localhost:8000/ws/audio"
@@ -19,7 +21,7 @@ export function usePushToTalkAudio({ wsUrl }: UsePushToTalkOptions) {
         setError(null);
 
         try {
-            // 1) Mic permission + stream
+            // 1) Get mic permission + stream
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     echoCancellation: true,
@@ -30,7 +32,7 @@ export function usePushToTalkAudio({ wsUrl }: UsePushToTalkOptions) {
             streamRef.current = stream;
 
             // 2) AudioContext (must be started from a user gesture on iOS)
-            const ctx = new AudioContext();
+            const ctx = new AudioContext({ latencyHint: "interactive" });
             ctxRef.current = ctx;
 
             // 3) Load AudioWorklet module
@@ -55,33 +57,47 @@ export function usePushToTalkAudio({ wsUrl }: UsePushToTalkOptions) {
             wsRef.current = ws;
 
             ws.onopen = () => {
-                // Send a small control message first (useful for backend)
-                ws.send(
-                    JSON.stringify({
-                        type: "start",
-                        format: "pcm16le",
-                        sampleRate: ctx.sampleRate,
-                        channels: 1,
-                    })
-                );
+                console.log("[WS] open");
+                const startMsg = createWsMessage(
+                    WsMessageType.START,
+                    createWsStartContent("pcm16le", 16000, 1, true, "en-US")
+                )
+                ws.send(JSON.stringify(startMsg));
 
-                // Stream PCM frames
+                let frames = 0;
+
                 workletNode.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
-                    if (ws.readyState === WebSocket.OPEN) {
-                        ws.send(event.data); // ArrayBuffer (PCM16LE)
+                    frames++;
+                    if (frames % 50 === 0) {
+                        console.log("[AUDIO] sending frame", frames, "bytes=", event.data.byteLength);
                     }
+                    if (ws.readyState === WebSocket.OPEN) ws.send(event.data);
                 };
 
                 setIsRecording(true);
             };
 
-            ws.onerror = () => {
+            ws.onmessage = (ev) => {
+                if (typeof ev.data !== "string") return;
+                const msg = JSON.parse(ev.data);
+
+                if (msg.type === "transcript") {
+                    console.log(`[${msg.final ? "FINAL" : "INTERIM"}] ${msg.text}`);
+                }
+
+                if (msg.type === "end") {
+                    console.log("[WS] end from server, closing socket");
+                    ws.close();
+                }
+            };
+
+            ws.onerror = (e) => {
+                console.log("[WS] error", e);
                 setError("WebSocket error.");
             };
 
-            ws.onclose = () => {
-                // If server closes unexpectedly, stop locally
-                // (avoid calling stop() here to prevent loops; just update state)
+            ws.onclose = (e) => {
+                console.log("[WS] close", { code: e.code, reason: e.reason, wasClean: e.wasClean });
                 setIsRecording(false);
             };
         } catch (e: any) {
@@ -114,8 +130,6 @@ export function usePushToTalkAudio({ wsUrl }: UsePushToTalkOptions) {
                 } catch {
                     // ignore
                 }
-                wsRef.current.close();
-                wsRef.current = null;
             }
         } finally {
             setIsRecording(false);
