@@ -13,6 +13,7 @@ router = APIRouter()
 @router.websocket("/ws/audio")
 async def ws_audio(websocket: WebSocket):
     await websocket.accept()
+    loop = asyncio.get_running_loop()
 
     # Thread-safe bridge: async (FastAPI) <-> sync (Google client)
     q: janus.Queue[Optional[bytes]] = janus.Queue()
@@ -29,7 +30,7 @@ async def ws_audio(websocket: WebSocket):
     async def send_json(payload: dict):
         await websocket.send_text(json.dumps(payload))
 
-    def google_streaming_worker():
+    def google_streaming_worker(loop: asyncio.AbstractEventLoop):
         """
         Runs in a thread. Pulls PCM chunks from q.sync_q and feeds Google STT.
         Sends results back to the async loop using asyncio.run_coroutine_threadsafe.
@@ -57,7 +58,6 @@ async def ws_audio(websocket: WebSocket):
                     break
                 yield speech.StreamingRecognizeRequest(audio_content=chunk)
 
-        loop = asyncio.get_event_loop()
         try:
             responses = client.streaming_recognize(requests=request_gen())
             for resp in responses:
@@ -66,6 +66,13 @@ async def ws_audio(websocket: WebSocket):
                         continue
                     text = result.alternatives[0].transcript
                     is_final = result.is_final
+
+                    # Print the full produced transcription
+                    print(text)
+                    if is_final:
+                        print(f"[STT FINAL] {text}")
+                    else:
+                        print(f"[STT PARTIAL] {text}", end="\r")
 
                     fut = asyncio.run_coroutine_threadsafe(
                         send_json(
@@ -121,7 +128,7 @@ async def ws_audio(websocket: WebSocket):
                     if not worker_started:
                         # run blocking Google streaming in a thread
                         worker_task = asyncio.create_task(
-                            asyncio.to_thread(google_streaming_worker)
+                            asyncio.to_thread(google_streaming_worker, loop)
                         )
                         worker_started = True
 

@@ -17,12 +17,12 @@ once you've done this
 ```
 [FOR BACKEND]
 uv run main.py
-#or 
+#or
 python main.py
 
 [FOR FRONTEND]
 uv run streamlit run frontend.py
-#or 
+#or
 streamlit run frontend.py --server.port 8501
 ```
 
@@ -37,9 +37,14 @@ http://127.0.0.1:8000/redoc
 http://localhost:8501
 ```
 
-
 To run potential tests:
 
 ```
 pytest
+```
+
+Google Cloud Logins:
+
+```
+gcloud auth application-default set-quota-project kaggle-medgemma-hackathon-2026
 ```

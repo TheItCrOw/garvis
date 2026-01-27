@@ -2,7 +2,7 @@ import { usePushToTalkAudio } from "./usePushToTalkAudio";
 
 export default function TalkButton() {
   const { start, stop, isRecording, error } = usePushToTalkAudio({
-    wsUrl: "ws://localhost:8000/api/ws/audio",
+    wsUrl: "ws://localhost:8000/ws/audio",
   });
 
   return (
