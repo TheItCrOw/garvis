@@ -1,5 +1,5 @@
 import { config } from "../config";
-import { usePushToTalkAudio } from "./usePushToTalkAudio";
+import { usePushToTalkAudio } from "./useGarvisWsClient";
 
 export default function TalkButton() {
   const { start, stop, isRecording, error } = usePushToTalkAudio({
