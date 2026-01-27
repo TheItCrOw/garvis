@@ -2,7 +2,7 @@ import json
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from app.core.GarvisWsSession import GarvisWsSession
+from app.core.garvis_ws_session import GarvisWsSession
 from app.core.dto.ws_messages import (
     WsMessage,
     WsMessageType,
@@ -56,11 +56,14 @@ async def ws_audio(websocket: WebSocket):
     except WebSocketDisconnect:
         # client vanished: stop worker
         try:
-            session.q.async_q.put_nowait(None)
+            session.transcription_queue.async_q.put_nowait(None)
+            session.garvis_task_queue.async_q.put_nowait(None)
         except Exception:
             pass
         if session.worker_task:
             await session.worker_task
     finally:
-        session.q.close()
-        await session.q.wait_closed()
+        session.transcription_queue.close()
+        session.garvis_task_queue.close()
+        await session.transcription_queue.wait_closed()
+        await session.garvis_task_queue.wait_closed()

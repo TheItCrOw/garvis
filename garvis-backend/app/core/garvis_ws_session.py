@@ -16,14 +16,22 @@ from app.core.dto.ws_messages import (
     WsTranscriptContent,
 )
 from google.cloud import speech
+from uuid import uuid4
+
+from app.core.garvis import Garvis
+from app.core.garvis_task import GarvisTask
 
 
 class GarvisWsSession:
     def __init__(self, websocket: WebSocket):
         self.ws = websocket
         self.loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
-        self.q: janus.Queue[Optional[bytes]] = janus.Queue()
+        self.transcription_queue: janus.Queue[Optional[bytes]] = janus.Queue()
+        self.garvis_task_queue: janus.Queue[Optional[GarvisTask]] = janus.Queue()
+        self.garvis_consumer_task: Optional[asyncio.Task] = None
+        self.garvis = Garvis()
         self.final_transcript_parts: list[str] = []
+        self.session_id = str(uuid4())
 
         self.started = False
         self.worker_task: Optional[asyncio.Task] = None
@@ -34,6 +42,21 @@ class GarvisWsSession:
             "channels": 1,
             "interim_results": True,
         }
+
+    async def _consume_garvis_tasks(self):
+        """
+        A background task that constantly fetches tasks from the garvis_task_queue and
+        processed them through our Garvis agent network.
+        """
+        while True:
+            task = await self.garvis_task_queue.async_q.get()
+            if task is None:
+                break
+
+            # sequential processing of a task by garvis, one at a time, in order
+            garvis_answer = await self.garvis.handle_task(task)
+            # send back to client
+            await self.send_garvis_answer(garvis_answer)
 
     async def send(self, msg: WsMessage):
         if self.ws.client_state != WebSocketState.CONNECTED:
@@ -59,6 +82,11 @@ class GarvisWsSession:
         self.cfg["language_code"] = c.languageCode
         self.cfg["interim_results"] = c.interimResults
 
+        if self.garvis_consumer_task is None:
+            self.garvis_consumer_task = asyncio.create_task(
+                self._consume_garvis_tasks()
+            )
+
         if not self.started:
             self.worker_task = asyncio.create_task(
                 asyncio.to_thread(self._google_worker, self.loop)
@@ -70,31 +98,31 @@ class GarvisWsSession:
     async def handle_stop(self, msg: WsMessage[WsStopContent]):
         # signal generator to end
         try:
-            self.q.async_q.put_nowait(None)
+            self.transcription_queue.async_q.put_nowait(None)
         except Exception:
             pass
 
         await self.send_ack("stopping")
-
         # IMPORTANT: wait for worker to flush final transcripts
         if self.worker_task:
             await self.worker_task
 
-        # TODO @Brando: Here we have the full transcript.
-        # This is the entry point into the agent network.
-        transcription = " ".join(self.final_transcript_parts)
-        print(transcription)
-        garvis_answer = None  # I'll have to think about the exact return format
-        await self.send_garvis_answer(garvis_answer)
+        # stop garvis consumer
+        self.garvis_task_queue.sync_q.put(None)
+        if self.garvis_consumer_task:
+            await self.garvis_consumer_task
 
-        # After agents finish, send END
+        full_transcription_history = " ".join(self.final_transcript_parts)
+        print(full_transcription_history)
+
+        # After everything finishes, send END
         await self.send_end()
 
     async def handle_audio(self, data: bytes):
         if not self.started:
             await self.send_error("Send START before audio bytes")
             return
-        self.q.async_q.put_nowait(data)
+        self.transcription_queue.async_q.put_nowait(data)
 
     def _google_worker(self, loop: asyncio.AbstractEventLoop):
         client = speech.SpeechClient()
@@ -113,7 +141,7 @@ class GarvisWsSession:
 
         def request_gen():
             while True:
-                chunk = self.q.sync_q.get()
+                chunk = self.transcription_queue.sync_q.get()
                 if chunk is None:
                     break
                 yield speech.StreamingRecognizeRequest(audio_content=chunk)
@@ -132,6 +160,15 @@ class GarvisWsSession:
 
                     if is_final:
                         self.final_transcript_parts.append(text)
+                        self.garvis_task_queue.sync_q.put(
+                            GarvisTask(self.session_id, text)
+                        )
+                        print("Adding task to garvis queue:", text)
+                        print(
+                            "Task-Q size:",
+                            self.garvis_task_queue.sync_q.qsize(),
+                            flush=True,
+                        )
                     print(f"[{'FINAL' if is_final else 'INTERIM'}] {text}", flush=True)
 
                     asyncio.run_coroutine_threadsafe(
