@@ -83,6 +83,7 @@ class GarvisWsSession:
         # TODO @Brando: Here we have the full transcript.
         # This is the entry point into the agent network.
         transcription = " ".join(self.final_transcript_parts)
+        print(transcription)
         garvis_answer = None  # I'll have to think about the exact return format
         await self.send_garvis_answer(garvis_answer)
 
