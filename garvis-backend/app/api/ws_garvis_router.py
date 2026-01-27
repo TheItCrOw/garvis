@@ -31,21 +31,21 @@ async def ws_audio(websocket: WebSocket):
 
                 # route by type
                 try:
-                    mtype = WsMessageType(raw.get("type"))
+                    message_type = WsMessageType(raw.get("type"))
                 except Exception:
                     await session.send_error("Unknown message type")
                     continue
 
-                if mtype == WsMessageType.START:
+                if message_type == WsMessageType.START:
                     parsed = WsMessage.from_json(raw, content_cls=WsStartContent)
                     await session.handle_start(parsed)
-                elif mtype == WsMessageType.STOP:
+                elif message_type == WsMessageType.STOP:
                     parsed = WsMessage.from_json(raw, content_cls=WsStopContent)
                     await session.handle_stop(parsed)
                     break
                 else:
                     await session.send_error(
-                        f"Unsupported control message: {mtype.value}"
+                        f"Unsupported control message: {message_type.value}"
                     )
 
             elif msg.get("bytes") is not None:
