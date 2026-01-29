@@ -17,7 +17,7 @@ once you've done this
 ```
 [FOR BACKEND]
 uv run main.py
-#or 
+#or
 python main.py
 ```
 
@@ -28,7 +28,6 @@ To see current backend documentation
 http://127.0.0.1:8000/docs
 http://127.0.0.1:8000/redoc
 ```
-
 
 To run potential tests:
 

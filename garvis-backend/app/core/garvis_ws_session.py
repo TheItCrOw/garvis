@@ -22,14 +22,16 @@ from app.core.garvis import Garvis
 from app.core.garvis_task import GarvisTask
 
 
-class GarvisWsSession:
+class GarvisWebsocketSession:
     def __init__(self, websocket: WebSocket):
         self.ws = websocket
         self.loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
+        self.garvis = Garvis()
+
         self.transcription_queue: janus.Queue[Optional[bytes]] = janus.Queue()
         self.garvis_task_queue: janus.Queue[Optional[GarvisTask]] = janus.Queue()
         self.garvis_consumer_task: Optional[asyncio.Task] = None
-        self.garvis = Garvis()
+
         self.final_transcript_parts: list[str] = []
         self.session_id = str(uuid4())
 

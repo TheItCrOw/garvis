@@ -2,7 +2,7 @@ import json
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from app.core.garvis_ws_session import GarvisWsSession
+from app.core.garvis_ws_session import GarvisWebsocketSession
 from app.core.dto.ws_messages import (
     WsMessage,
     WsMessageType,
@@ -16,7 +16,7 @@ router = APIRouter()
 @router.websocket("/ws/audio")
 async def ws_audio(websocket: WebSocket):
     await websocket.accept()
-    session = GarvisWsSession(websocket)
+    session = GarvisWebsocketSession(websocket)
 
     try:
         while True:
