@@ -11,7 +11,12 @@ export default function Navbar() {
         <NavLink className="navbar-brand fw-bold" to="/">
           <div className="d-flex align-items-center">
             <img src={logo} height={40} />
-            <h2 className="mb-0 text-primary fw-bold">arvis</h2>
+            <h2
+              className="mb-0 text-primary fw-bold"
+              style={{ fontSize: "25px" }}
+            >
+              arvis
+            </h2>
           </div>
         </NavLink>
 
@@ -29,7 +34,7 @@ export default function Navbar() {
             <div className="nav-item w-100 text-center">
               <NavLink className="nav-link" to="/login">
                 <h5 className="mb-0">User</h5>
-                <FontAwesomeIcon icon={faUser} className="ms-1" size="xl" />
+                <FontAwesomeIcon icon={faUser} className="ms-1" />
               </NavLink>
             </div>
           </div>

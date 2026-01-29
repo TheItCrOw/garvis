@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar/Navbar";
 import Home from "./components/Home/Home";
+import GarvisButton from "./audio/GarvisButton";
 
 function About() {
   return <div className="container mt-4">About Garvis</div>;
@@ -19,6 +20,7 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
+      <GarvisButton />
     </>
   );
 }

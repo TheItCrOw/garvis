@@ -11,10 +11,15 @@
     "pwa:assets": "pwa-assets-generator public/logo.png --preset minimal-2023"
   },
   "dependencies": {
+    "@fontsource-variable/nunito-sans": "^5.2.7",
+    "@fontsource/nunito-sans": "^5.2.7",
+    "@fortawesome/free-solid-svg-icons": "^7.1.0",
+    "@fortawesome/react-fontawesome": "^3.1.1",
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.8",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.13.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

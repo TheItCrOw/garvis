@@ -11,9 +11,127 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --primary-color: rgb(64, 134, 244);
+}
+
+* {
+  font-family: "Nunito Sans", sans-serif;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+}
+
+.talk-garvis-container {
+  position: relative;
+  width: 100%;
+}
+
+#talk-garvis-btn {
+  position: fixed;
+  bottom: 20px;
+  left: calc(50% - 37.5px);
+  width: 75px;
+  height: 75px;
+  background-color: ghostwhite;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  z-index: 3;
+  border: lightgray solid 1px;
+  justify-content: center;
+  transition: 0.15s;
+  box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+}
+
+#talk-garvis-btn.is-recording {
+  background-color: white !important;
+  border: 2px dashed var(--primary-color);
+  transform: scale(1.1);
+  transition: 0.15s;
+}
+
+/* rotating border */
+#talk-garvis-btn.is-recording::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 2px dashed var(--primary-color);
+  animation: spin 25s linear infinite;
+}
+
+/* keep inner content above the border */
+#talk-garvis-btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#talk-garvis-recoding-label {
+  position: fixed;
+  font-weight: bold;
+  font-style: italic;
+  display: none;
+  color: var(--primary-color);
+  bottom: 100px;
+  font-size: x-large;
+  width: 100%;
+  text-align: center;
+  z-index: 3;
+  left: 0;
+}
+
+#talk-garvis-error-msg {
+  position: fixed;
+  z-index: 3;
+  bottom: 100px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-weight: bold;
+  font-style: italic;
+  color: red;
+  font-size: medium;
+}
+
+#garvis-transcription-div .backdrop {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  transition: 0.25s;
+  width: 100%;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 1;
+}
+
+#garvis-transcription-div .history {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  word-break: break-all;
+  position: absolute;
+  color: white;
+  padding-left: 16px;
+  padding-right: 16px;
+  font-size: 30px;
+  height: calc(100vh - 150px);
+  overflow: auto;
+  /* border-bottom: gray 3px solid; */
+  top: 36px;
+  left: 0;
+  width: 100%;
+  z-index: 2;
 }

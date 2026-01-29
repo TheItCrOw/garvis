@@ -9,6 +9,7 @@ import {
     type WsTranscriptContent,
     type WsAckContent,
     type WsErrorContent,
+    type WsGarvisContent,
 } from "../models/websocket/messages"
 
 type Listener<T> = (msg: WsMessage<T>) => void;
@@ -18,6 +19,7 @@ export class AudioWsClient {
 
     private onAckListeners: Listener<WsAckContent>[] = [];
     private onTranscriptListeners: Listener<WsTranscriptContent>[] = [];
+    private onGarvisListeners: Listener<WsGarvisContent>[] = [];
     private onErrorListeners: Listener<WsErrorContent>[] = [];
     private onEndListeners: Listener<unknown>[] = [];
     private onRawMessageListeners: ((raw: unknown) => void)[] = [];
@@ -57,6 +59,9 @@ export class AudioWsClient {
                             break;
                         case WsMessageType.ERROR:
                             this.onErrorListeners.forEach((fn) => fn(msg as WsMessage<WsErrorContent>));
+                            break;
+                        case WsMessageType.GARVIS:
+                            this.onGarvisListeners.forEach((fn) => fn(msg as WsMessage<WsGarvisContent>));
                             break;
                         case WsMessageType.END:
                             this.onEndListeners.forEach((fn) => fn(msg));
@@ -114,6 +119,11 @@ export class AudioWsClient {
     onTranscript(fn: Listener<WsTranscriptContent>): () => void {
         this.onTranscriptListeners.push(fn);
         return () => (this.onTranscriptListeners = this.onTranscriptListeners.filter((x) => x !== fn));
+    }
+
+    onGarvis(fn: Listener<WsGarvisContent>): () => void {
+        this.onGarvisListeners.push(fn);
+        return () => (this.onGarvisListeners = this.onGarvisListeners.filter((x) => x !== fn));
     }
 
     onError(fn: Listener<WsErrorContent>): () => void {

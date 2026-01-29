@@ -81,6 +81,14 @@ class WsStartContent:
 
 
 @dataclass
+class WsGarvisContent:
+    intent: str = ""
+    answer: str = ""
+    audio_base64: str = ""
+    audio_mime_type: str = ""
+
+
+@dataclass
 class WsStopContent:
     reason: str = ""
 

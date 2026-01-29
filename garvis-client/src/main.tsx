@@ -6,6 +6,7 @@ import App from "./App";
 import { registerSW } from "virtual:pwa-register";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
+import "@fontsource/nunito-sans/index.css";
 
 registerSW({ immediate: true });
 

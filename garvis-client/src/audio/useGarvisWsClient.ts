@@ -3,18 +3,34 @@ import { useCallback, useRef, useState } from "react";
 import { AudioWsClient } from "./GarvisWsClient";
 import { createWsStartContent } from "../models/websocket/messages";
 
-type UsePushToTalkOptions = {
+type UseGarvisWsClientOptions = {
     wsUrl: string;
 };
 
-export function usePushToTalkAudio({ wsUrl }: UsePushToTalkOptions) {
+export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
     const [isRecording, setIsRecording] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [transcripts, setTranscripts] = useState<string[]>([]);
+
+    // const addTranscript = (text: string) => {
+    //     setTranscripts(prev => [...prev, text]);
+    // };
 
     const clientRef = useRef<AudioWsClient | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const ctxRef = useRef<AudioContext | null>(null);
     const workletNodeRef = useRef<AudioWorkletNode | null>(null);
+
+    function playB64Audio(audioB64: string, mime: string) {
+        const bytes = Uint8Array.from(atob(audioB64), c => c.charCodeAt(0));
+        const blob = new Blob([bytes], { type: mime });
+        const url = URL.createObjectURL(blob);
+
+        const audio = new Audio(url);
+        audio.onended = () => URL.revokeObjectURL(url);
+        audio.play();
+    }
+
 
     const cleanup = useCallback(async () => {
         try {
@@ -43,6 +59,7 @@ export function usePushToTalkAudio({ wsUrl }: UsePushToTalkOptions) {
 
     const start = useCallback(async () => {
         if (isRecording) return;
+        setTranscripts([]); // Empty the transcript history
         setError(null);
 
         try {
@@ -78,9 +95,16 @@ export function usePushToTalkAudio({ wsUrl }: UsePushToTalkOptions) {
                 setIsRecording(false);
             });
 
-            // debug transcripts
             client.onTranscript((m) => {
+                setTranscripts([m.content.text]);
                 console.log(`[${m.content.final ? "FINAL" : "INTERIM"}]`, m.content.text);
+            });
+
+            client.onGarvis((m) => {
+                console.log(`[GARVIS] ${m.content.intent}: ${m.content.answer}`);
+                if (m.content.audio_base64 !== undefined && m.content.audio_mime_type !== undefined) {
+                    playB64Audio(m.content.audio_base64, m.content.audio_mime_type)
+                }
             });
 
             client.onRawMessage((msg) => {
@@ -110,5 +134,5 @@ export function usePushToTalkAudio({ wsUrl }: UsePushToTalkOptions) {
         await cleanup();
     }, [cleanup, isRecording]);
 
-    return { start, stop, isRecording, error };
+    return { start, stop, isRecording, error, transcripts };
 }

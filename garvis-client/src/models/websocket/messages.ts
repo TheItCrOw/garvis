@@ -49,6 +49,13 @@ export const createWsStartContent = (
     languageCode,
 });
 
+export interface WsGarvisContent {
+    intent: string;
+    answer: string;
+    audio_base64?: string;
+    audio_mime_type?: string;
+}
+
 export interface WsStopContent {
     reason?: string;
 }
