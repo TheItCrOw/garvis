@@ -13,6 +13,7 @@ If you haven't, create a `.env` file and enter the following parameters:
 
 ```
 VITE_BACKEND_WS_URL=ws://localhost:8000/ws/audio
+VITE_API_BASE=http://localhost:8000/api
 ```
 
 If you run this client in a non-standard localhost, then adjust them appropriately.

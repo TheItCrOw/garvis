@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useRef, useState } from "react";
-import { AudioWsClient } from "./GarvisWsClient";
+import { GarvisWsClient } from "./GarvisWsClient";
 import { createWsStartContent } from "../models/websocket/messages";
+import { playB64Audio } from "./audioUtils"
 
 type UseGarvisWsClientOptions = {
     wsUrl: string;
@@ -16,21 +17,10 @@ export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
     //     setTranscripts(prev => [...prev, text]);
     // };
 
-    const clientRef = useRef<AudioWsClient | null>(null);
+    const clientRef = useRef<GarvisWsClient | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const ctxRef = useRef<AudioContext | null>(null);
     const workletNodeRef = useRef<AudioWorkletNode | null>(null);
-
-    function playB64Audio(audioB64: string, mime: string) {
-        const bytes = Uint8Array.from(atob(audioB64), c => c.charCodeAt(0));
-        const blob = new Blob([bytes], { type: mime });
-        const url = URL.createObjectURL(blob);
-
-        const audio = new Audio(url);
-        audio.onended = () => URL.revokeObjectURL(url);
-        audio.play();
-    }
-
 
     const cleanup = useCallback(async () => {
         try {
@@ -85,7 +75,7 @@ export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
             source.connect(workletNode);
             workletNode.connect(silentGain).connect(ctx.destination);
 
-            const client = new AudioWsClient(wsUrl);
+            const client = new GarvisWsClient(wsUrl);
             clientRef.current = client;
 
             client.onError((m) => setError(m.content.message));

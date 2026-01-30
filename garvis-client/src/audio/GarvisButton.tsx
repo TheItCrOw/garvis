@@ -27,12 +27,14 @@ export default function GarvisButton() {
       {/* The dropdown which shows what's being transcribed and understood by Garvis */}
       <div
         id="garvis-transcription-div"
-        className={isRecording == false ? "d-none" : ""}
+        className={isRecording == false ? "" : "open"}
       >
         <div className="backdrop"></div>
         <div className="history">
           {transcripts.length === 0 && (
-            <span className="history-empty">Yes?</span>
+            <span className="history-empty" style={{ fontSize: "3rem" }}>
+              Yes?
+            </span>
           )}
 
           {transcripts.map((text, idx) => (

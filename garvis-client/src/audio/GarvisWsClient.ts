@@ -14,7 +14,7 @@ import {
 
 type Listener<T> = (msg: WsMessage<T>) => void;
 
-export class AudioWsClient {
+export class GarvisWsClient {
     private ws: WebSocket | null = null;
 
     private onAckListeners: Listener<WsAckContent>[] = [];

@@ -104,6 +104,36 @@ body {
   font-size: medium;
 }
 
+#garvis-transcription-div {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+#garvis-transcription-div .backdrop {
+  opacity: 0;
+}
+
+/* history: slide up from bottom (pop-up effect) */
+#garvis-transcription-div .history {
+  transform: translateY(100vh);
+  opacity: 0;
+  transition:
+    transform 0.25s ease,
+    opacity 0.2s ease;
+  will-change: transform, opacity;
+}
+
+/* OPEN STATE */
+#garvis-transcription-div.open {
+  pointer-events: auto;
+}
+
+#garvis-transcription-div.open .backdrop {
+  opacity: 1;
+}
+
 #garvis-transcription-div .backdrop {
   position: fixed;
   top: 0;
@@ -121,17 +151,23 @@ body {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  word-break: break-all;
   position: absolute;
   color: white;
   padding-left: 16px;
   padding-right: 16px;
   font-size: 30px;
   height: calc(100vh - 150px);
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
   overflow: auto;
   /* border-bottom: gray 3px solid; */
   top: 36px;
   left: 0;
   width: 100%;
   z-index: 2;
+}
+
+#garvis-transcription-div.open .history {
+  transform: translateY(0);
+  opacity: 1;
 }
