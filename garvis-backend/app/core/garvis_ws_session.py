@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 import json
 from pathlib import Path
 from typing import Optional
@@ -17,18 +18,27 @@ from app.core.dto.ws_messages import (
     WsStopRecordingContent,
     WsTranscriptContent,
 )
-from app.services.text_to_speech_service import synthesize_speech_mp3_b64
+from app.services.text_to_speech_service import TextToSpeechService
+from app.database.duckdb_data_service import DataService
 from google.cloud import speech
 from uuid import uuid4
 
 from app.core.garvis import Garvis
 from app.core.garvis_task import GarvisTask
+from app.utils.date_utils import get_day_info
+from app.utils.string_utils import normalize_text
 
 
 class GarvisWebsocketSession:
-    def __init__(self, websocket: WebSocket):
+    def __init__(
+        self,
+        websocket: WebSocket,
+        tts_service: TextToSpeechService,
+        stt_client: speech.SpeechClient,
+    ):
         self.ws = websocket
         self.loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
+        self.ds = DataService()
         self.garvis = Garvis()
 
         self.transcription_queue: janus.Queue[Optional[bytes]] = janus.Queue()
@@ -48,27 +58,21 @@ class GarvisWebsocketSession:
             "interim_results": True,
         }
 
-    async def _consume_garvis_tasks(self):
-        """
-        A background task that constantly fetches tasks from the garvis_task_queue and
-        processed them through our Garvis agent network.
-        """
-        while True:
-            task = await self.garvis_task_queue.async_q.get()
-            if task is None:
-                break
+        # Create the text-to-speech service
+        self.tts_service = tts_service
 
-            # sequential processing of a task by garvis, one at a time, in order
-            # TODO! This should be: await self.garvis.handle_task(task)
-            garvis_answer = "Of course sir, just one second."
-
-            audio_b64, mime = await asyncio.to_thread(
-                synthesize_speech_mp3_b64,
-                garvis_answer,
-                # output_path=Path(f"audio/garvis/{self.session_id}.mp3"),
-            )
-            # send back to client
-            await self.send_garvis_answer("Completion", garvis_answer, audio_b64, mime)
+        # Create the speech-to-text Google Cloud connection clients
+        self.stt_client = stt_client
+        self.stt_recognition_config = speech.RecognitionConfig(
+            encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+            sample_rate_hertz=self.cfg["sample_rate"],
+            language_code=self.cfg["language_code"],
+            audio_channel_count=self.cfg["channels"],
+        )
+        self.stt_streaming_config = speech.StreamingRecognitionConfig(
+            config=self.stt_recognition_config,
+            interim_results=self.cfg["interim_results"],
+        )
 
     async def send(self, msg: WsMessage):
         if self.ws.client_state != WebSocketState.CONNECTED:
@@ -84,6 +88,17 @@ class GarvisWebsocketSession:
     async def send_end(self):
         await self.send(WsMessage.create(WsMessageType.END, {}))
 
+    async def send_welcome_message(self):
+        now = datetime.now()
+        day = get_day_info(now)
+        hour = now.strftime("%I").lstrip("0")
+        am_pm = now.strftime("%p").lower()
+        message = f"Welcome Sir, it's {day.weekday} the {day.day} of {day.month}, {hour} o'clock {am_pm}"
+        audio_b64, mime = await asyncio.to_thread(
+            self.tts_service.synthesize_speech_mp3_b64, message
+        )
+        await self.send_garvis_answer("Welcome", message, audio_b64, mime)
+
     async def send_garvis_answer(
         self,
         intent: str,
@@ -93,6 +108,28 @@ class GarvisWebsocketSession:
     ):
         content = WsGarvisContent(intent, answer, audio_base64, audio_mime_type)
         await self.send(WsMessage.create(WsMessageType.GARVIS, content))
+
+    async def _consume_garvis_tasks(self):
+        """
+        A background task that constantly fetches tasks from the garvis_task_queue and
+        processed them through our Garvis agent network.
+        """
+        while True:
+            task = await self.garvis_task_queue.async_q.get()
+            if task is None:
+                break
+
+            # sequential processing of a task by garvis, one at a time, in order
+            # TODO! This should be: await self.garvis.handle_task(task)
+            garvis_answer = "Of course sir, just one second."
+
+            audio_b64, mime = await asyncio.to_thread(
+                self.tts_service.synthesize_speech_mp3_b64,
+                garvis_answer,
+                # output_path=Path(f"audio/garvis/{self.session_id}.mp3"),
+            )
+            # send back to client
+            await self.send_garvis_answer("Completion", garvis_answer, audio_b64, mime)
 
     async def handle_start_recording(self, msg: WsMessage[WsStartRecordingContent]):
         c = msg.content
@@ -142,19 +179,6 @@ class GarvisWebsocketSession:
         self.transcription_queue.async_q.put_nowait(data)
 
     def _stt_worker(self, loop: asyncio.AbstractEventLoop):
-        client = speech.SpeechClient()
-
-        recognition_config = speech.RecognitionConfig(
-            encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-            sample_rate_hertz=self.cfg["sample_rate"],
-            language_code=self.cfg["language_code"],
-            audio_channel_count=self.cfg["channels"],
-        )
-
-        streaming_config = speech.StreamingRecognitionConfig(
-            config=recognition_config,
-            interim_results=self.cfg["interim_results"],
-        )
 
         def request_gen():
             while True:
@@ -164,8 +188,8 @@ class GarvisWebsocketSession:
                 yield speech.StreamingRecognizeRequest(audio_content=chunk)
 
         try:
-            responses = client.streaming_recognize(
-                config=streaming_config, requests=request_gen()
+            responses = self.stt_client.streaming_recognize(
+                config=self.stt_streaming_config, requests=request_gen()
             )
 
             for resp in responses:
@@ -176,16 +200,18 @@ class GarvisWebsocketSession:
                     is_final = result.is_final
 
                     if is_final:
-                        self.final_transcript_parts.append(text)
-                        self.garvis_task_queue.sync_q.put(
-                            GarvisTask(self.session_id, text)
-                        )
-                        print("Adding task to garvis queue:", text)
-                        print(
-                            "Task-Q size:",
-                            self.garvis_task_queue.sync_q.qsize(),
-                            flush=True,
-                        )
+                        if text is not None and len(text) > 2:
+                            text = normalize_text(text)
+                            self.final_transcript_parts.append(text)
+                            self.garvis_task_queue.sync_q.put(
+                                GarvisTask(self.session_id, text)
+                            )
+                            print("Adding task to garvis queue:", text)
+                            print(
+                                "Task-Q size:",
+                                self.garvis_task_queue.sync_q.qsize(),
+                                flush=True,
+                            )
                     print(f"[{'FINAL' if is_final else 'INTERIM'}] {text}", flush=True)
 
                     asyncio.run_coroutine_threadsafe(

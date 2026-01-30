@@ -10,14 +10,22 @@ from app.core.dto.ws_messages import (
     WsStartRecordingContent,
     WsStopRecordingContent,
 )
+from app.services.text_to_speech_service import TextToSpeechService
+from google.cloud import speech
 
 router = APIRouter()
+
+print("Setting up the TTS and STT Services, might take a moment...")
+tts_service = TextToSpeechService()  # Text to speech setup
+stt_client = speech.SpeechClient()  # Speech to Text setup
+print("Done!")
 
 
 @router.websocket("/ws/audio")
 async def ws_audio(websocket: WebSocket):
     await websocket.accept()
-    session = GarvisWebsocketSession(websocket)
+    session = GarvisWebsocketSession(websocket, tts_service, stt_client)
+    await session.send_welcome_message()
 
     try:
         while True:

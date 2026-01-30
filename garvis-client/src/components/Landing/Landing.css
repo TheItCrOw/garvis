@@ -1,0 +1,78 @@
+.landing-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-color);
+  backdrop-filter: blur(6px);
+
+  /* fade animation */
+  opacity: 1;
+  transition: opacity 250ms ease;
+}
+
+.landing-card {
+  width: min(520px, 92vw);
+  padding: 24px;
+  border-radius: 16px;
+  background: ghostwhite;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    rgba(50, 50, 93, 0.25) 0px 50px 100px -20px,
+    rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
+  color: white;
+  text-align: center;
+
+  /* card animation */
+  transform: scale(1);
+  opacity: 1;
+  transition:
+    transform 1000ms ease,
+    opacity 1000ms ease;
+}
+
+/* EXIT STATES */
+.landing-overlay--exit {
+  opacity: 0;
+}
+
+.landing-card--exit {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+.landing-title {
+  margin: 0 0 8px;
+  font-size: 3.5rem;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.landing-button {
+  appearance: none;
+  margin-top: 24px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 12px 18px;
+  font-size: medium;
+  font-weight: 600;
+}
+
+.landing-hint {
+  margin: 14px 0 0;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* Optional: respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .landing-overlay,
+  .landing-card {
+    transition: none;
+  }
+}
