@@ -4,8 +4,8 @@ import {
     WsMessageType,
     createWsMessage,
     isWsMessage,
-    type WsStartContent,
-    type WsStopContent,
+    type WsStartRecordingContent,
+    type WsStopRecordingContent,
     type WsTranscriptContent,
     type WsAckContent,
     type WsErrorContent,
@@ -90,12 +90,12 @@ export class GarvisWsClient {
         this.ws.send(JSON.stringify(msg));
     }
 
-    sendStart(content: WsStartContent): void {
-        this.send(createWsMessage(WsMessageType.START, content));
+    sendStartRecording(content: WsStartRecordingContent): void {
+        this.send(createWsMessage(WsMessageType.START_RECORDING, content));
     }
 
-    sendStop(content: WsStopContent = {}): void {
-        this.send(createWsMessage(WsMessageType.STOP, content));
+    sendStopRecording(content: WsStopRecordingContent = {}): void {
+        this.send(createWsMessage(WsMessageType.STOP_RECORDING, content));
     }
 
     sendAudioFrame(buffer: ArrayBuffer): void {

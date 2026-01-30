@@ -1,13 +1,14 @@
 import json
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi.websockets import WebSocketState
 
 from app.core.garvis_ws_session import GarvisWebsocketSession
 from app.core.dto.ws_messages import (
     WsMessage,
     WsMessageType,
-    WsStartContent,
-    WsStopContent,
+    WsStartRecordingContent,
+    WsStopRecordingContent,
 )
 
 router = APIRouter()
@@ -20,6 +21,10 @@ async def ws_audio(websocket: WebSocket):
 
     try:
         while True:
+            # If the websocket disconnected by the client, break the loop.
+            if websocket.client_state != WebSocketState.CONNECTED:
+                break
+
             msg = await websocket.receive()
 
             if msg.get("text") is not None:
@@ -36,13 +41,16 @@ async def ws_audio(websocket: WebSocket):
                     await session.send_error("Unknown message type")
                     continue
 
-                if message_type == WsMessageType.START:
-                    parsed = WsMessage.from_json(raw, content_cls=WsStartContent)
-                    await session.handle_start(parsed)
-                elif message_type == WsMessageType.STOP:
-                    parsed = WsMessage.from_json(raw, content_cls=WsStopContent)
-                    await session.handle_stop(parsed)
-                    break
+                if message_type == WsMessageType.START_RECORDING:
+                    parsed = WsMessage.from_json(
+                        raw, content_cls=WsStartRecordingContent
+                    )
+                    await session.handle_start_recording(parsed)
+                elif message_type == WsMessageType.STOP_RECORDING:
+                    parsed = WsMessage.from_json(
+                        raw, content_cls=WsStopRecordingContent
+                    )
+                    await session.handle_stop_recording(parsed)
                 else:
                     await session.send_error(
                         f"Unsupported control message: {message_type.value}"

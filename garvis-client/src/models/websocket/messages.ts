@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export enum WsMessageType {
-    START = "start",
-    STOP = "stop",
+    START_RECORDING = "startRecording",
+    STOP_RECORDING = "stopRecording",
     ACK = "ack",
     TRANSCRIPT = "transcript",
     GARVIS = "garvis",
@@ -27,7 +27,7 @@ export const createWsMessage = <T>(type: WsMessageType, content: T): WsMessage<T
 
 // ---- Message Contents ----
 
-export interface WsStartContent {
+export interface WsStartRecordingContent {
     format: string;
     sampleRate: number;
     channels: number;
@@ -35,13 +35,13 @@ export interface WsStartContent {
     languageCode: string;
 }
 
-export const createWsStartContent = (
+export const createWsStartRecordingContent = (
     format: string,
     sampleRate: number,
     channels: number,
     interimResults: boolean,
     languageCode: string
-): WsStartContent => ({
+): WsStartRecordingContent => ({
     format,
     sampleRate,
     channels,
@@ -56,7 +56,7 @@ export interface WsGarvisContent {
     audio_mime_type?: string;
 }
 
-export interface WsStopContent {
+export interface WsStopRecordingContent {
     reason?: string;
 }
 

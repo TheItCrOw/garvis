@@ -13,8 +13,8 @@ from app.core.dto.ws_messages import (
     WsGarvisContent,
     WsMessage,
     WsMessageType,
-    WsStartContent,
-    WsStopContent,
+    WsStartRecordingContent,
+    WsStopRecordingContent,
     WsTranscriptContent,
 )
 from app.services.text_to_speech_service import synthesize_speech_mp3_b64
@@ -38,7 +38,7 @@ class GarvisWebsocketSession:
         self.final_transcript_parts: list[str] = []
         self.session_id = str(uuid4())
 
-        self.started = False
+        self.isRecording = False
         self.worker_task: Optional[asyncio.Task] = None
 
         self.cfg = {
@@ -94,34 +94,34 @@ class GarvisWebsocketSession:
         content = WsGarvisContent(intent, answer, audio_base64, audio_mime_type)
         await self.send(WsMessage.create(WsMessageType.GARVIS, content))
 
-    async def handle_start(self, msg: WsMessage[WsStartContent]):
+    async def handle_start_recording(self, msg: WsMessage[WsStartRecordingContent]):
         c = msg.content
         self.cfg["sample_rate"] = c.sampleRate
         self.cfg["channels"] = c.channels
         self.cfg["language_code"] = c.languageCode
         self.cfg["interim_results"] = c.interimResults
 
-        if self.garvis_consumer_task is None:
-            self.garvis_consumer_task = asyncio.create_task(
-                self._consume_garvis_tasks()
-            )
+        # if self.garvis_consumer_task is None:
+        self.garvis_consumer_task = asyncio.create_task(self._consume_garvis_tasks())
 
-        if not self.started:
+        if not self.isRecording:
             self.worker_task = asyncio.create_task(
                 asyncio.to_thread(self._stt_worker, self.loop)
             )
-            self.started = True
+            self.isRecording = True
 
-        await self.send_ack("stream started")
+        await self.send_ack("audio stream started")
+        print("Starting recording.")
 
-    async def handle_stop(self, msg: WsMessage[WsStopContent]):
+    async def handle_stop_recording(self, msg: WsMessage[WsStopRecordingContent]):
         # signal generator to end
         try:
             self.transcription_queue.async_q.put_nowait(None)
         except Exception:
             pass
 
-        await self.send_ack("stopping")
+        print("Stopping recording.")
+        await self.send_ack("stopping recording")
         # IMPORTANT: wait for worker to flush final transcripts
         if self.worker_task:
             await self.worker_task
@@ -131,14 +131,12 @@ class GarvisWebsocketSession:
         if self.garvis_consumer_task:
             await self.garvis_consumer_task
 
+        self.isRecording = False
         full_transcription_history = " ".join(self.final_transcript_parts)
         print(full_transcription_history)
 
-        # After everything finishes, send END
-        await self.send_end()
-
     async def handle_audio(self, data: bytes):
-        if not self.started:
+        if not self.isRecording:
             await self.send_error("Send START before audio bytes")
             return
         self.transcription_queue.async_q.put_nowait(data)
@@ -203,4 +201,3 @@ class GarvisWebsocketSession:
         except Exception as e:
             print("GOOGLE ERROR:", str(e), flush=True)
             asyncio.run_coroutine_threadsafe(self.send_error(str(e)), loop)
-        # NOTE: END is emitted by handle_stop(), not here (prevents send-after-close races)

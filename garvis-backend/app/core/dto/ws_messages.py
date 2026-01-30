@@ -6,8 +6,8 @@ import uuid
 
 
 class WsMessageType(str, Enum):
-    START = "start"
-    STOP = "stop"
+    START_RECORDING = "startRecording"
+    STOP_RECORDING = "stopRecording"
     ACK = "ack"
     TRANSCRIPT = "transcript"
     GARVIS = "garvis"
@@ -53,7 +53,7 @@ class WsMessage(Generic[T]):
 
 
 @dataclass
-class WsStartContent:
+class WsStartRecordingContent:
     format: str
     sampleRate: int
     channels: int
@@ -70,7 +70,7 @@ class WsStartContent:
         }
 
     @classmethod
-    def from_json(cls, data: Dict[str, Any]) -> "WsStartContent":
+    def from_json(cls, data: Dict[str, Any]) -> "WsStartRecordingContent":
         return cls(
             format=data["format"],
             sampleRate=int(data["sampleRate"]),
@@ -89,7 +89,7 @@ class WsGarvisContent:
 
 
 @dataclass
-class WsStopContent:
+class WsStopRecordingContent:
     reason: str = ""
 
 

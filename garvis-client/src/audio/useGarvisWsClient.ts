@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { GarvisWsClient } from "./GarvisWsClient";
-import { createWsStartContent } from "../models/websocket/messages";
+import { createWsStartRecordingContent } from "../models/websocket/messages";
 import { playB64Audio } from "./audioUtils"
 
 type UseGarvisWsClientOptions = {
@@ -10,26 +10,104 @@ type UseGarvisWsClientOptions = {
 
 export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
     const [isRecording, setIsRecording] = useState(false);
+    const [wsIsConnected, setWsIsConnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [transcripts, setTranscripts] = useState<string[]>([]);
 
-    // const addTranscript = (text: string) => {
-    //     setTranscripts(prev => [...prev, text]);
-    // };
-
+    const didInitRef = useRef(false);
     const clientRef = useRef<GarvisWsClient | null>(null);
+    const connectingRef = useRef<Promise<void> | null>(null);
+
     const streamRef = useRef<MediaStream | null>(null);
-    const ctxRef = useRef<AudioContext | null>(null);
+    const audioCtxRef = useRef<AudioContext | null>(null);
     const workletNodeRef = useRef<AudioWorkletNode | null>(null);
+
+    const setupClientHandlersOnce = useCallback((client: GarvisWsClient) => {
+        client.onError((m) => setError(m.content.message));
+
+        client.onEnd(() => {
+            setIsRecording(false);
+        });
+
+        client.onTranscript((m) => {
+            setTranscripts([m.content.text]);
+            console.log(`[${m.content.final ? "FINAL" : "INTERIM"}]`, m.content.text);
+        });
+
+        client.onGarvis((m) => {
+            console.log(`[GARVIS] ${m.content.intent}: ${m.content.answer}`);
+            if (m.content.audio_base64 !== undefined && m.content.audio_mime_type !== undefined) {
+                playB64Audio(m.content.audio_base64, m.content.audio_mime_type);
+            }
+        });
+
+        client.onRawMessage((msg) => {
+            console.log("[WS ⬅]", msg);
+        });
+    }, []);
+
+    useEffect(() => {
+        if (didInitRef.current) return;
+        didInitRef.current = true;
+
+        let cancelled = false;
+
+        (async () => {
+            console.log("Initiating Websocket Connection...");
+
+            try {
+                if (!clientRef.current) {
+                    const client = new GarvisWsClient(wsUrl);
+                    clientRef.current = client;
+                    console.log("Connected!")
+                    setupClientHandlersOnce(client);
+                    setWsIsConnected(true);
+                }
+
+                // If already open, just mark connected
+                if (clientRef.current.isOpen()) {
+                    console.log("Websocket already open.");
+                    if (!cancelled) setWsIsConnected(true);
+                    return;
+                }
+
+                // Prevent parallel connects
+                if (connectingRef.current) {
+                    console.log("Waiting for existing connect...");
+                    await connectingRef.current;
+                    return;
+                }
+
+                const p = clientRef.current.connect();
+                connectingRef.current = p;
+
+                await p;
+                connectingRef.current = null;
+
+                console.log("Websocket connected. client.isOpen =", clientRef.current.isOpen());
+                if (!cancelled) setWsIsConnected(true);
+            } catch (e: any) {
+                connectingRef.current = null;
+                console.error("Websocket init failed:", e);
+                if (!cancelled) setError(e?.message ?? "WS init failed");
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+        // Intentionally run once:
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const cleanup = useCallback(async () => {
         try {
             workletNodeRef.current?.disconnect();
             workletNodeRef.current = null;
 
-            if (ctxRef.current) {
-                await ctxRef.current.close();
-                ctxRef.current = null;
+            if (audioCtxRef.current) {
+                await audioCtxRef.current.close();
+                audioCtxRef.current = null;
             }
 
             if (streamRef.current) {
@@ -37,9 +115,8 @@ export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
                 streamRef.current = null;
             }
 
-            // Do NOT hard-close immediately; ask server to stop and wait for END.
             if (clientRef.current && clientRef.current.isOpen()) {
-                clientRef.current.sendStop({ reason: "user_released" });
+                clientRef.current.sendStopRecording({ reason: "user_released" })
             }
         } finally {
             // UI: we can flip immediately, server will close shortly after END
@@ -47,11 +124,11 @@ export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
         }
     }, []);
 
-    const start = useCallback(async () => {
+    const startRecording = useCallback(async () => {
         if (isRecording) return;
         setTranscripts([]); // Empty the transcript history
         setError(null);
-
+        if (clientRef.current === null) return;
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -59,7 +136,7 @@ export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
             streamRef.current = stream;
 
             const ctx = new AudioContext({ latencyHint: "interactive" });
-            ctxRef.current = ctx;
+            audioCtxRef.current = ctx;
             await ctx.resume();
 
             const workletUrl = new URL("../audio/pcm-worklet.js", import.meta.url);
@@ -75,41 +152,13 @@ export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
             source.connect(workletNode);
             workletNode.connect(silentGain).connect(ctx.destination);
 
-            const client = new GarvisWsClient(wsUrl);
-            clientRef.current = client;
-
-            client.onError((m) => setError(m.content.message));
-            client.onEnd(() => {
-                // server finished; close and stop UI state
-                client.close();
-                setIsRecording(false);
-            });
-
-            client.onTranscript((m) => {
-                setTranscripts([m.content.text]);
-                console.log(`[${m.content.final ? "FINAL" : "INTERIM"}]`, m.content.text);
-            });
-
-            client.onGarvis((m) => {
-                console.log(`[GARVIS] ${m.content.intent}: ${m.content.answer}`);
-                if (m.content.audio_base64 !== undefined && m.content.audio_mime_type !== undefined) {
-                    playB64Audio(m.content.audio_base64, m.content.audio_mime_type)
-                }
-            });
-
-            client.onRawMessage((msg) => {
-                console.log("[WS ⬅]", msg);
-            });
-
-            await client.connect();
-
             // Worklet outputs 16k mono PCM16LE frames (see pcm-worklet.js below)
-            client.sendStart(
-                createWsStartContent("pcm16le", 16000, 1, true, "en-US")
+            clientRef.current.sendStartRecording(
+                createWsStartRecordingContent("pcm16le", 16000, 1, true, "en-US")
             );
 
             workletNode.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
-                client.sendAudioFrame(event.data);
+                if (clientRef.current !== null) clientRef.current.sendAudioFrame(event.data);
             };
 
             setIsRecording(true);
@@ -117,12 +166,12 @@ export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
             setError(e?.message ?? "Failed to start audio.");
             await cleanup();
         }
-    }, [cleanup, isRecording, wsUrl]);
+    }, [cleanup, isRecording]);
 
-    const stop = useCallback(async () => {
+    const stopRecording = useCallback(async () => {
         if (!isRecording) return;
         await cleanup();
     }, [cleanup, isRecording]);
 
-    return { start, stop, isRecording, error, transcripts };
+    return { startRecording, stopRecording, isRecording, error, transcripts, wsIsConnected };
 }
