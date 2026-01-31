@@ -48,7 +48,7 @@ export default function Home() {
         <h1 className="mb-0" style={{ fontSize: "2.1rem" }}>
           Welcome Sir,
         </h1>
-        <p className="mb-3 small text-secondary">
+        <p className="mb-4 small text-secondary">
           below you find your calendar.
         </p>
         {/* <hr className="mt-2 mb-3 text-secondary" /> */}

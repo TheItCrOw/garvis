@@ -6,7 +6,7 @@ from app.api.calendar import router as calendar_router
 from app.database.duckdb_data_service import DataService
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
-from app.core.garvis import Garvis
+from app.core.garvis import Garvis, get_garvis
 from app.core.garvis_task import GarvisTask
 from app.services.agentic_assistant_service import AgenticAssistantService
 
@@ -32,8 +32,8 @@ app.include_router(health_router, prefix="/api")
 app.include_router(calendar_router, prefix="/api")
 ds = DataService()
 print("Total Patients", ds.count_patients())
-current_agent = AgenticAssistantService()
-AgenticAssistantService.initialize(ds)
+garvis = get_garvis()
+
 
 @app.get("/")
 def root():
@@ -48,7 +48,6 @@ class Item(BaseModel):
 
 @app.post("/invoke_agent/")
 async def invoke_agent(item: Item):
-    garvis = Garvis(current_agent)
     task = GarvisTask(session_id=item.session_id, query=item.query)
     reply = await garvis.handle_task(task)
     return {

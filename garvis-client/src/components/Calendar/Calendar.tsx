@@ -93,7 +93,7 @@ export function Calendar({ entries, className }: CalendarProps) {
                 })}
               </label>
             </div>
-            <ul className="notes">
+            <ul className="notes mb-0">
               {entry.notes
                 ?.split("-")
                 .map((note) =>

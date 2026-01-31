@@ -23,7 +23,7 @@ from app.database.duckdb_data_service import DataService
 from google.cloud import speech
 from uuid import uuid4
 
-from app.core.garvis import Garvis
+from app.core.garvis import get_garvis
 from app.core.garvis_task import GarvisTask
 from app.utils.date_utils import get_day_info
 from app.utils.string_utils import normalize_text
@@ -39,7 +39,7 @@ class GarvisWebsocketSession:
         self.ws = websocket
         self.loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
         self.ds = DataService()
-        self.garvis = Garvis(None)
+        self.garvis = get_garvis()
 
         self.transcription_queue: janus.Queue[Optional[bytes]] = janus.Queue()
         self.garvis_task_queue: janus.Queue[Optional[GarvisTask]] = janus.Queue()
@@ -120,13 +120,10 @@ class GarvisWebsocketSession:
                 break
 
             # sequential processing of a task by garvis, one at a time, in order
-            # TODO! This should be: await self.garvis.handle_task(task)
-            garvis_answer = "Of course sir, just one second."
-
+            garvis_answer = await self.garvis.handle_task(task)
             audio_b64, mime = await asyncio.to_thread(
                 self.tts_service.synthesize_speech_mp3_b64,
                 garvis_answer,
-                # output_path=Path(f"audio/garvis/{self.session_id}.mp3"),
             )
             # send back to client
             await self.send_garvis_answer("Completion", garvis_answer, audio_b64, mime)
