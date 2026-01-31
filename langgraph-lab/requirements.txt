@@ -10,11 +10,11 @@
 uv pip install langgraph langchain langchain-core langchain-community
 
 # LLM Providers and State Management
-uv pip install langchain-openai langchain-ollama langgraph-checkpoint langchain-chroma
+uv pip install langchain-openai langchain-ollama langgraph-checkpoint langchain-chroma langchain-google-genai
 
 # Research Tools and Utilities (DuckDuckGo is FREE - no API key!)
 uv pip install ddgs beautifulsoup4 requests python-dotenv pydantic typing-extensions
 
-uv pip install python-dotenv streamlit pypdf duckdb tabulate pygraphviz duckduckgo-search langgraph-checkpoint-sqlite
+uv pip install streamlit pypdf duckdb tabulate pygraphviz duckduckgo-search langgraph-checkpoint-sqlite
 
 echo "LANGGRAPH_INSTALLED" > /root/langgraph-ready.txt

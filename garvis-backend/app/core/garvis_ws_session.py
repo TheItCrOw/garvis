@@ -39,7 +39,7 @@ class GarvisWebsocketSession:
         self.ws = websocket
         self.loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
         self.ds = DataService()
-        self.garvis = Garvis()
+        self.garvis = Garvis(None)
 
         self.transcription_queue: janus.Queue[Optional[bytes]] = janus.Queue()
         self.garvis_task_queue: janus.Queue[Optional[GarvisTask]] = janus.Queue()

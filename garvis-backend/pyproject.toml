@@ -21,7 +21,20 @@ dependencies = [
   "uv",
   "google-cloud-speech",
   "google-cloud-texttospeech",
-  "janus"
+  "janus",
+  "langgraph",
+  "langgraph-checkpoint-sqlite",
+  "langgraph-checkpoint",
+  "langchain",
+  "langchain-core",
+  "langchain-community",
+  "langchain-openai",
+  "langchain-ollama",
+  "langchain-chroma",
+  "langchain-google-genai",
+  "ddgs",  
+  "duckduckgo-search",
+  "tabulate"
 ]
 
 [project.optional-dependencies]

@@ -14,9 +14,7 @@ from app.core.models.database_models import (
     JsonDataclassMixin,
 )
 
-
 SERVER_TIME_ZONE = ZoneInfo("America/Los_Angeles")
-
 
 class DataService:
     def __init__(self, db_path: str = "./data/garvis.duckdb") -> None:
