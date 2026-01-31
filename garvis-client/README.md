@@ -4,6 +4,9 @@
 
 You need NodeJS and npm installed. Then, install the modules once and run it:
 
+You may need to update your nodejs
+https://nodejs.org/en/download
+then you may need to use a specific version nvm use 24
 ```
 npm install
 npm run dev

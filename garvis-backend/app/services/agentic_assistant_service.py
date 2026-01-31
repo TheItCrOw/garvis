@@ -20,11 +20,13 @@ from app.core.dto.agent_state import AgentState
 from app.core.garvis_task import GarvisTask
 #import tabulate
 from threading import Lock
+from app.database.duckdb_data_service import DataService
 
 class AgenticAssistantService():
     OLLAMA_MODEL: ClassVar[str] = "MedAIBase/MedGemma1.5:4b"
     _ollama_lock: ClassVar[Lock] = Lock()
     _ollama_client: ClassVar[Optional[ChatOllama]] = None
+    _data_service:DataService=None
 
     @classmethod
     def get_ollama(cls) -> ChatOllama:
@@ -38,6 +40,10 @@ class AgenticAssistantService():
                         temperature=0,
                     )
         return cls._ollama_client
+
+    @classmethod
+    def initialize(cls, data_service:DataService):
+        cls._data_service = data_service
 
     def _load_env(self):
         print(".env loaded!" if load_dotenv() else ".env not existing!")
@@ -71,9 +77,6 @@ class AgenticAssistantService():
 
     ##################
     # i know, i know, the code looks ugly for now, but the goal is to make it work, then let's refactor later XD
-
-    def _connect_db(db_path: Path) -> duckdb.DuckDBPyConnection:
-        return duckdb.connect(str(db_path))
 
     def _sanitize_sql(sql: str) -> str:
 
@@ -112,18 +115,13 @@ class AgenticAssistantService():
                 out.append(f"- {c[0]}: {c[1]}")
             out.append("")
         return "\n".join(out).strip()    
-    
 
     @tool
     def get_schema() -> str:
         """Return the DuckDB schema information (tables and columns) in a compact format."""
-        DB_PATH = Path("/media/SN850X-A/vscode/kaggle/garvis/garvis-backend/data/garvis.duckdb").resolve()   # <-- change if needed
 
-        con = AgenticAssistantService._connect_db(Path(DB_PATH))
-        try:
+        with AgenticAssistantService._data_service.connection() as con:
             database_markdown = AgenticAssistantService._schema_markdown(con)
-        finally:
-            con.close()        
         
         return database_markdown
 
@@ -132,16 +130,10 @@ class AgenticAssistantService():
         """
         Execute a read-only SQL query (SELECT/WITH) against DuckDB and return results as markdown.
         """
-
-        DB_PATH = "/media/SN850X-A/vscode/kaggle/garvis/garvis-backend/data/garvis.duckdb"
         sql = AgenticAssistantService._sanitize_sql(query)
-        con = AgenticAssistantService._connect_db(DB_PATH)
-        try:
+
+        with AgenticAssistantService._data_service.connection() as con:
             df = con.execute(sql).df()
-        finally:
-            con.close()        
-        
-        #print(f"****************\n\n{query}\n\n****************")
 
         if df.empty:
             return f"SQL:\n{sql}\n\nResult: (no rows)"
@@ -153,12 +145,6 @@ class AgenticAssistantService():
         Use the Med Gemma model for medical-related inquiries, like asking what disease or ailment shows certain symptoms.
         Or in cases where for certain situations, what is the first aid
         """
-
-        # llm_ollama = ChatOllama(
-        #             model="MedAIBase/MedGemma1.5:4b"
-        #             ,validate_model_on_init=True
-        #             ,temperature=0
-        #         )
 
         resp = AgenticAssistantService.get_ollama().invoke([
             SystemMessage(content="""You are an amazing AI-assistant that specializes in medical and health-related inquiries.

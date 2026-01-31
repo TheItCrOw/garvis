@@ -11,7 +11,7 @@ from app.services.agentic_assistant_service import AgenticAssistantService
 from app.api.ws_garvis_router import router as ws_garvis_router
 
 load_dotenv()
-current_agent = AgenticAssistantService()
+
 
 app = FastAPI(title="Garvis Backend", version="0.1.0")
 app.include_router(ws_garvis_router)
@@ -19,7 +19,8 @@ app.include_router(ws_garvis_router)
 app.include_router(health_router, prefix="/api")
 ds = DataService()
 print("Total Patients", ds.count_patients())
-
+current_agent = AgenticAssistantService()
+AgenticAssistantService.initialize(ds)
 
 @app.get("/")
 def root():
