@@ -2,7 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { useState } from "react";
 import Navbar from "./components/Navbar/Navbar";
 import Home from "./components/Home/Home";
-import GarvisButton from "./audio/GarvisButton";
+import GarvisButton from "./garvis/GarvisButton";
 import Landing from "./components/Landing/Landing";
 
 function About() {

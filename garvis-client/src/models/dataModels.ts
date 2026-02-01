@@ -34,12 +34,12 @@ export const NullableDateOnly = DateOnlySchema.nullable();
 
 export const PatientSchema = z.object({
     patient_id: z.number(),
-    created_at: NullableDateTime,
+    created_at: DateTimeSchema,
 
     first_name: z.string().nullable(),
     last_name: z.string().nullable(),
     sex: z.string().nullable(),
-    date_of_birth: NullableDateOnly,
+    date_of_birth: DateTimeSchema,
 
     deceased_flag: z.boolean().nullable(),
     marital_status: z.string().nullable(),
@@ -60,7 +60,7 @@ export const PatientSchema = z.object({
     insurance_plan_id: z.number().nullable(),
 
     active_flag: z.boolean().nullable(),
-    last_seen_at: NullableDateOnly,
+    last_seen_at: DateTimeSchema.nullable(),
 
     height_cm: z.number().nullable(),
     weight_kg: z.number().nullable(),

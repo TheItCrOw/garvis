@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.health import router as health_router
 from app.api.calendar import router as calendar_router
+from app.api.patient import router as patients_router
 from app.database.duckdb_data_service import DataService
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
@@ -30,6 +31,7 @@ app.add_middleware(
 app.include_router(ws_garvis_router)
 app.include_router(health_router, prefix="/api")
 app.include_router(calendar_router, prefix="/api")
+app.include_router(patients_router, prefix="/api")
 ds = DataService()
 print("Total Patients", ds.count_patients())
 garvis = get_garvis()

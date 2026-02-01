@@ -1,6 +1,8 @@
 import { config } from "../config";
 import { useGarvisWsClient } from "./useGarvisWsClient";
 import logo from "./../assets/logo.png";
+import { faStop } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export default function GarvisButton() {
   const {
@@ -10,6 +12,9 @@ export default function GarvisButton() {
     error,
     transcripts,
     wsIsConnected,
+    garvisIsSpeaking,
+    stopGarvisSpeech,
+    garvisIsThinking,
   } = useGarvisWsClient({
     wsUrl: config.backendWsUrl,
   });
@@ -25,7 +30,13 @@ export default function GarvisButton() {
           )}
           <button
             id="talk-garvis-btn"
-            className={`btn ${isRecording ? "is-recording" : ""}`}
+            className={[
+              isRecording ? "is-recording" : "",
+              garvisIsSpeaking ? "is-speaking" : "",
+              garvisIsThinking ? "is-thinking" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             onPointerDown={() => startRecording()}
             onPointerUp={() => stopRecording()}
             onPointerCancel={() => stopRecording()}
@@ -34,6 +45,15 @@ export default function GarvisButton() {
             <img src={logo} alt="Garvis logo" width={50} />
           </button>
           {error && <div id="talk-garvis-error-msg">{error}</div>}
+          {/* {garvisIsSpeaking && (
+            <button
+              id="stop-garvis-speech-btn"
+              className="btn"
+              onClick={stopGarvisSpeech}
+            >
+              <FontAwesomeIcon icon={faStop} />
+            </button>
+          )} */}
         </div>
       ) : (
         ""

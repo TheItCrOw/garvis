@@ -1,0 +1,127 @@
+.pf-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+
+  align-items: flex-start;
+  padding-top: 20px;
+  bottom: 0;
+
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+
+.pf-sheet {
+  width: 100vw;
+  max-width: 1100px;
+  height: calc(100vh - 20px);
+  background: ghostwhite;
+  border-radius: 16px 16px 0px 0px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+
+  transform: translateY(110%);
+  transition: transform 220ms ease;
+  will-change: transform;
+}
+
+.pf-open {
+  opacity: 1;
+}
+
+.pf-open .pf-sheet {
+  transform: translateY(0);
+}
+
+.pf-closed {
+  opacity: 0;
+}
+
+.pf-closed .pf-sheet {
+  transform: translateY(110%);
+}
+
+.pf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.pf-title {
+  font-size: 16px;
+  color: var(--dark);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 12px;
+}
+
+.pf-close {
+  appearance: none;
+  border: none;
+  background: lightgray;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.pf-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.pf-content {
+  padding-left: 14px;
+  padding-right: 14px;
+  padding-bottom: 14px;
+  padding-top: 7px;
+  overflow: auto;
+  flex: 1;
+}
+
+.pf-state {
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  text-align: center;
+  color: var(--primary-color);
+  font-size: 14px;
+}
+
+.pf-error {
+  background: rgba(255, 0, 0, 0.08);
+}
+
+.pf-content .label-value-pair {
+  border-bottom: 1px rgba(125, 125, 125, 0.15) dotted;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.pf-label {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: small;
+  opacity: 0.75;
+  color: var(--primary-color);
+  align-self: center;
+  word-break: break-word;
+}
+
+.pf-value {
+  font-size: small;
+  align-self: left;
+  margin-top: 4px;
+  word-break: break-word;
+}

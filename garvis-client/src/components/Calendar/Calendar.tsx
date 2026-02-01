@@ -6,11 +6,13 @@ import {
   faArrowDown,
   faMinus,
   faArrowUp,
+  faUser,
 } from "@fortawesome/free-solid-svg-icons";
 
 type CalendarProps = {
   entries: CalendarEntry[];
   className?: string;
+  onCalendarEntryClicked?: (entry: CalendarEntry) => void;
 };
 
 function PriorityIcon({ priority }: { priority?: string | null }) {
@@ -43,7 +45,11 @@ function PriorityIcon({ priority }: { priority?: string | null }) {
   }
 }
 
-export function Calendar({ entries, className }: CalendarProps) {
+export function Calendar({
+  entries,
+  className,
+  onCalendarEntryClicked,
+}: CalendarProps) {
   const sortedEntries = useMemo(() => {
     return [...entries].sort((a, b) => {
       const at = a.start_at?.getTime() ?? Number.POSITIVE_INFINITY;
@@ -68,7 +74,11 @@ export function Calendar({ entries, className }: CalendarProps) {
       </h6>
       <div className="p-2">
         {sortedEntries.map((entry, index) => (
-          <div key={entry.calendar_id} className="calendar-entry">
+          <div
+            key={entry.calendar_id}
+            className="calendar-entry"
+            onClick={() => onCalendarEntryClicked?.(entry)}
+          >
             <div className="d-flex align-items-center justify-content-between">
               <div className="w-100 mb-0 text-start d-flex align-items-center">
                 <PriorityIcon priority={entry.priority} />
@@ -81,17 +91,29 @@ export function Calendar({ entries, className }: CalendarProps) {
                   )}
                 </div>
               </div>
-              <label className="time-range">
-                {entry.start_at?.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}{" "}
-                –{" "}
-                {entry.end_at?.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </label>
+              <div>
+                <p className="time-range mb-0">
+                  {entry.start_at?.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}{" "}
+                  –{" "}
+                  {entry.end_at?.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+                <p className="patient">
+                  <span className="d-flex align-items-baseline">
+                    <FontAwesomeIcon
+                      className="me-0 text-secondary"
+                      icon={faUser}
+                    />
+                    Patient:
+                  </span>
+                  <span className="patient-id">{entry.patient_id}</span>
+                </p>
+              </div>
             </div>
             <ul className="notes mb-0">
               {entry.notes

@@ -196,6 +196,16 @@ class GarvisWebsocketSession:
                     text = result.alternatives[0].transcript
                     is_final = result.is_final
 
+                    asyncio.run_coroutine_threadsafe(
+                        self.send(
+                            WsMessage.create(
+                                WsMessageType.TRANSCRIPT,
+                                WsTranscriptContent(text=text, final=is_final),
+                            )
+                        ),
+                        loop,
+                    ).result()
+
                     if is_final:
                         if text is not None and len(text) > 2:
                             text = normalize_text(text)
@@ -210,16 +220,6 @@ class GarvisWebsocketSession:
                                 flush=True,
                             )
                     print(f"[{'FINAL' if is_final else 'INTERIM'}] {text}", flush=True)
-
-                    asyncio.run_coroutine_threadsafe(
-                        self.send(
-                            WsMessage.create(
-                                WsMessageType.TRANSCRIPT,
-                                WsTranscriptContent(text=text, final=is_final),
-                            )
-                        ),
-                        loop,
-                    ).result()
 
         except Exception as e:
             print("GOOGLE ERROR:", str(e), flush=True)

@@ -2,13 +2,18 @@ import { useEffect, useState } from "react";
 import type { CalendarEntry } from "../../models/dataModels";
 import { Calendar } from "../Calendar/Calendar";
 import { getCalendarOfDoctor } from "./../../core/calendar.api";
-import { toIsoDateOnlyLocal } from "./../../utils/dateUtils";
 import "./Home.css";
+import PatientFile from "../PatientFile/PatientFile";
 
 export default function Home() {
   const [entries, setEntries] = useState<CalendarEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [patientFileOpen, setPatientFileOpen] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -56,8 +61,23 @@ export default function Home() {
         {loading && <p className="text-secondary">Loading…</p>}
         {error && <p className="text-danger">{error}</p>}
 
-        {!loading && !error && <Calendar entries={entries} />}
+        {!loading && !error && (
+          <Calendar
+            entries={entries}
+            onCalendarEntryClicked={(entry) => {
+              if (entry.patient_id == null) return;
+              setSelectedPatientId(entry.patient_id);
+              setPatientFileOpen(true);
+            }}
+          />
+        )}
       </div>
+
+      <PatientFile
+        isOpen={patientFileOpen}
+        patient_id={selectedPatientId}
+        onClose={() => setPatientFileOpen(false)}
+      />
     </div>
   );
 }

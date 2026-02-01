@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GarvisWsClient } from "./GarvisWsClient";
 import { createWsStartRecordingContent } from "../models/websocket/messages";
-import { playB64Audio } from "./audioUtils"
+import { playB64Audio, stopCurrentAudio } from "./audioUtils"
 
 type UseGarvisWsClientOptions = {
     wsUrl: string;
@@ -10,6 +10,8 @@ type UseGarvisWsClientOptions = {
 
 export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
     const [isRecording, setIsRecording] = useState(false);
+    const [garvisIsSpeaking, setGarvisIsSpeaking] = useState(false);
+    const [garvisIsThinking, setGarvisIsThinking] = useState(false);
     const [wsIsConnected, setWsIsConnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [transcripts, setTranscripts] = useState<string[]>([]);
@@ -22,6 +24,11 @@ export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
     const audioCtxRef = useRef<AudioContext | null>(null);
     const workletNodeRef = useRef<AudioWorkletNode | null>(null);
 
+    const stopGarvisSpeech = useCallback(() => {
+        stopCurrentAudio();
+        setGarvisIsSpeaking(false);
+    }, []);
+
     const setupClientHandlersOnce = useCallback((client: GarvisWsClient) => {
         client.onError((m) => setError(m.content.message));
 
@@ -31,13 +38,26 @@ export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
 
         client.onTranscript((m) => {
             setTranscripts([m.content.text]);
+            setGarvisIsThinking(true);
             console.log(`[${m.content.final ? "FINAL" : "INTERIM"}]`, m.content.text);
         });
 
         client.onGarvis((m) => {
             console.log(`[GARVIS] ${m.content.intent}: ${m.content.answer}`);
-            if (m.content.audio_base64 !== undefined && m.content.audio_mime_type !== undefined) {
-                playB64Audio(m.content.audio_base64, m.content.audio_mime_type);
+            // Stop any speech that is currently playing
+            stopCurrentAudio();
+            setGarvisIsThinking(false);
+
+            // Make the new message speak
+            if (m.content.audio_base64 && m.content.audio_mime_type) {
+                playB64Audio(m.content.audio_base64, m.content.audio_mime_type, {
+                    onSpeakingChange: setGarvisIsSpeaking,
+                }).catch((e) => {
+                    console.warn("Audio play failed:", e);
+                    setGarvisIsSpeaking(false);
+                });
+            } else {
+                setGarvisIsSpeaking(false);
             }
         });
 
@@ -130,6 +150,7 @@ export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
         setError(null);
         if (clientRef.current === null) return;
         try {
+            stopCurrentAudio();
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
             });
@@ -139,7 +160,7 @@ export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
             audioCtxRef.current = ctx;
             await ctx.resume();
 
-            const workletUrl = new URL("../audio/pcm-worklet.js", import.meta.url);
+            const workletUrl = new URL("../garvis/pcm-worklet.js", import.meta.url);
             await ctx.audioWorklet.addModule(workletUrl);
 
             const source = ctx.createMediaStreamSource(stream);
@@ -173,5 +194,6 @@ export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
         await cleanup();
     }, [cleanup, isRecording]);
 
-    return { startRecording, stopRecording, isRecording, error, transcripts, wsIsConnected };
+    return { startRecording, stopRecording, isRecording, error, transcripts, wsIsConnected, garvisIsSpeaking, stopGarvisSpeech, garvisIsThinking };
+
 }

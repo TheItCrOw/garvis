@@ -11,16 +11,38 @@
 }
 
 .calendar .calendar-entry {
+  cursor: pointer;
 }
 
 .calendar .calendar-entry .time-range {
   background-color: rgba(125, 125, 125, 0.15);
   border-radius: 6px;
   font-size: small;
-  width: 135px;
+  width: 100px;
   margin-bottom: 0px;
   padding-top: 3px;
   text-align: center;
+}
+
+.calendar .calendar-entry .patient {
+  margin-bottom: 0;
+  font-size: small;
+  margin-top: 6px;
+  text-align: center;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  color: var(--dark);
+}
+
+.calendar .calendar-entry .patient-id {
+  background-color: rgba(125, 125, 125, 0.15);
+  margin-bottom: 0px;
+  padding-top: 3px;
+  padding-left: 3px;
+  padding-right: 3px;
+  border-radius: 6px;
+  color: var(--primary-color);
 }
 
 .calendar .calendar-entry .title {
