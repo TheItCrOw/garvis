@@ -80,6 +80,13 @@
   background: rgba(0, 0, 0, 0.1);
 }
 
+.open-patient-history-btn {
+  width: 100%;
+  background-color: var(--primary-color) !important;
+  border-radius: 0px !important;
+  color: white !important;
+}
+
 .pf-content {
   padding-left: 14px;
   padding-right: 14px;
