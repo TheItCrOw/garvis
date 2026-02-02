@@ -5,29 +5,23 @@ import re
 from dotenv import load_dotenv
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_community.tools import DuckDuckGoSearchRun
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
-from typing import ClassVar, Optional, Dict, Union
-from pydantic import BaseModel, Field, ConfigDict
+from typing import ClassVar, Optional
 
 from app.core.dto.agent_state import AgentState
 from app.core.dto.garvis_task import GarvisTask
 from app.core.dto.garvis_reply import GarvisReply
+import app.constants.agentic_assistant as agent_constants
 
 from threading import Lock
 from app.database.duckdb_data_service import DataService
+from app.schemas.client_command import ClientCommand
 
-class ClientCommand(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    view: str = Field(..., description="Client screen/view identifier (e.g., 'patient', 'doctor', 'calendar', 'chat','none').")
-    action: str = Field(..., description="Client action identifier (e.g., 'VIEW', 'LIST', 'none').")
-    parameters: Dict[str, Union[str|int]]| None
-    intent_confidence: float = Field(0.75, ge=0.0, le=1.0)
-    reasoning_short: str = Field("", description="1 short sentence rationale; no private or sensitive data.")
 
 class AgenticAssistantService:
     OLLAMA_MODEL: ClassVar[str] = "MedAIBase/MedGemma1.5:4b"
@@ -60,20 +54,6 @@ class AgenticAssistantService:
         self.llm_openai = None
         self.graph = None
 
-        self.SYSTEM_PROMPT = """
-        You are a concise conversational data assistant for a DuckDB hospital database that contains sensitive and personal information.
-
-        Rules:
-        - If a user asks a question that requires database data always run the get_schema first to know the correct table names then call the run_sql tool with the SQL query that you will build.
-        - If you are unsure what tables/columns exist, call get_schema first.
-        - Use ONLY the tool results to answer data questions; do not fabricate numbers.
-        - Some of the tools require specific parameters like doctor_id, doctor names, patient names,  patient_id, etc, only execute them if you have the data already within you.
-        - Keep responses brief and conversational, unless instructed to return in specific format or template.
-        - Avoid executing multiple SQL statements in a single invocation and do not end with semi-colon.
-        - Use explicit joins.
-        - Adhere to ANSI-SQL standards.
-        """
-
         self._load_env()
         self.im_alive = True
         self.llm_openai = ChatOpenAI(
@@ -85,25 +65,6 @@ class AgenticAssistantService:
             self.graph = self.build_graph()
 
     def route_to_client_command(self, state: AgentState) -> AgentState:
-        ROUTER_SYSTEM_PROMPT = """\
-        You are an intent router for a client application.
-        Given the conversation, output a single JSON object matching the schema.
-        Rules:
-        - Choose the best view/action for the user's latest request.
-        - parameters must be JSON-serializable.
-        - Do NOT include extra keys beyond the schema.
-        - Your only choices for the view are only the following ["Patient","PatientHistory","Doctor","Calendar","Xray","Medicine","None"]
-            - if the intent is something like "OPEN UP THE PATIENT FILE" or "GO TO PATIENT" return "Patient"
-            - if the intent is something like "OPEN UP THE Doctor FILE" or "GO TO Doctor" return "Doctor"
-            - if the intent is something like "OPEN UP CALENDAR OF..." or "GO TO SCHEDULE of..." return "Calendar"
-            - if the intent is unclear, select "None" for view
-        - Your only choices with action are only the following ["Add","View","Update","Delete","None"]
-            - if the intent is something like "Add a calendar event" or "add a new patient record" then choose "Add"
-            - if the intent is something like "Open the patient file of patient 1" or "open calendar on Jan 23, 2026" then choose "View"
-            - if the intent is something like "List me the patients" or "I want to see all the doctors" then choose "List"
-        - If unsure, default to view="None", action="None", parameters={"mode":"chat"}.
-        """        
-        
         # You can pass full history, or truncate to last N messages for cost control
         #messages = state.get("messages", [])
         #last_messages = messages[-4:]  # <-- only last 4
@@ -111,7 +72,7 @@ class AgenticAssistantService:
 
         router = self.llm_openai.with_structured_output(ClientCommand)
         reply = router.invoke(
-            [{"role": "system", "content": ROUTER_SYSTEM_PROMPT}, *last_messages]
+            [{"role": "system", "content": agent_constants.ROUTER_SYSTEM_PROMPT}, *last_messages]
         )
 
         state["view"] = reply.view
@@ -126,10 +87,7 @@ class AgenticAssistantService:
     
     def _sanitize_sql(sql: str) -> str:
 
-        _SQL_DISALLOWED = re.compile(
-            r"\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|ATTACH|DETACH|COPY|EXPORT|IMPORT|PRAGMA)\b",
-            re.IGNORECASE,
-        )
+        _SQL_DISALLOWED = re.compile(agent_constants.DISALLOWED_SQL,re.IGNORECASE)
 
         sql = (sql or "").strip().strip("`")
         sql = re.sub(r"^```(sql)?\s*|\s*```$", "", sql, flags=re.IGNORECASE).strip()
@@ -195,9 +153,7 @@ class AgenticAssistantService:
         resp = AgenticAssistantService.get_ollama().invoke(
             [
                 SystemMessage(
-                    content="""You are an amazing AI-assistant that specializes in medical and health-related inquiries.
-                        For every inquiry I give you, answer to the best of your capabilities, and always cite your sources 
-                        and state how confident are you from LOW, MEDIUM, and HIGH!"""
+                    content=agent_constants.MEDGEMMA_SYSEM_PROMPT
                 ),
                 HumanMessage(content=task),
             ]
@@ -218,7 +174,7 @@ class AgenticAssistantService:
 
     def assistant_node(self, state: AgentState) -> AgentState:
         response = self.llm_openai.invoke(
-            [SystemMessage(content=self.SYSTEM_PROMPT)] + state["messages"]
+            [SystemMessage(content=agent_constants.SYSTEM_PROMPT)] + state["messages"]
         )
         state["messages"] = state["messages"] + [response]
         return state
@@ -248,7 +204,6 @@ class AgenticAssistantService:
         builder.add_edge("route_to_client_command", END)
 
         return builder.compile(checkpointer=checkpointer)   
-    ###############################################################################################################################################
 
     def _chat(
         self, user_text: str, thread_id: str = "demo", display_tool_call: bool = True
