@@ -1,5 +1,9 @@
 # Garvis Backend
 
+## Prerequisite
+https://docs.cloud.google.com/sdk/docs/install-sdk
+1. we need to setup this on the local machine as we are utilizing Google STT and TSS
+
 ## Setup
 
 We use Python 3.12, navigate into the garvis-backend folder with your shell (current folder). On Windows, do:

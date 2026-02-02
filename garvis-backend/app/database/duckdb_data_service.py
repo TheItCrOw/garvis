@@ -3,7 +3,7 @@ import os
 from contextlib import contextmanager
 from datetime import date, datetime
 from typing import Generator, Optional, Any, Dict, List
-
+from langchain_core.tools import tool
 from zoneinfo import ZoneInfo
 
 from app.core.models.database_models import (
@@ -39,7 +39,6 @@ class DataService:
             con.close()
 
     # ========= Helper methods for free SQL querying =========
-
     def _fetchone_dict(
         self, con: duckdb.DuckDBPyConnection, sql: str, params: Optional[tuple] = None
     ) -> Optional[Dict[str, Any]]:
@@ -68,9 +67,71 @@ class DataService:
         with self.connection() as con:
             return con.execute("SELECT COUNT(*) FROM patient").fetchone()[0]
 
-    # ========= Specific Task methods =========
+    def export_tools(self):
+        @tool
+        def doctor_by_id(doctor_id: int) -> Optional["Doctor"]:
+            """Query the duckduckdb for the available doctors using doctor_id as the parameter.
+               Only query this table when explicitly instructed."""
+            return self.get_doctor_by_id(doctor_id)
+        
+        @tool
+        def doctor_by_full_name(doctor_id: int) -> Optional["Doctor"]:
+            """Query the duckduckdb for the available doctors using doctor_id as the parameter.
+               Only query this table when explicitly instructed."""
+            return self.get_doctor_by_full_name(doctor_id)
 
+        @tool
+        def patient_by_id(patient_id: int) -> Optional["Patient"]:
+            """Query the duckduckdb for the patient information using patient_id as the parameter.
+               Only query this table when explicitly instructed."""
+            return self.get_patient_by_id(patient_id)
+
+        @tool
+        def patient_by_full_name(first_name: str, last_name: str) -> Optional["Patient"]:
+            """Query the duckduckdb for the patients using first name and last name as the parameters.
+               Only query this table when explicitly instructed."""
+            return self.get_patient_by_full_name(first_name, last_name)
+        
+        @tool
+        def doctor_calendar_for_day(doctor_id: int, day: Optional[date] = None) -> List["CalendarEntry"]:
+            """Query the duckduckdb for the calendar and scheduled activities of a doctor using doctor_id and with an optional date parameters.
+                Full calendar (all entries) for a doctor on a given day.
+                Default day: today in Europe/Berlin.            
+               Only query this table when explicitly instructed."""
+            return self.get_doctor_calendar_for_day(doctor_id, day)
+
+        @tool
+        def patient_history(patient_id: int) -> List["PatientHistory"]:
+            """Query the duckduckdb for a specific patient's history using the patient_id as parameter.
+               Only query this table when explicitly instructed."""
+            return self.get_patient_history(patient_id)
+
+        @tool
+        def patient_history_with_doctor(patient_id: int, doctor_id: int) -> List["PatientHistory"]:
+            """Query the duckduckdb for a specific patient's history with a doctor using the patient_id and doctor_id as parameters.
+               Only query this table when explicitly instructed."""
+            return self.get_patient_history_with_doctor(patient_id, doctor_id)
+
+        @tool
+        def patient_with_full_history(patient_id: int) -> Optional[Dict[str, Any]]:
+            """Query the duckduckdb for a specific patient's history using the patient_id.
+               Only query this table when explicitly instructed."""
+            return self.get_patient_with_full_history(patient_id)
+
+        # return the tools
+        return [doctor_by_id
+                , doctor_by_full_name
+                , patient_by_id
+                , patient_by_full_name
+                , doctor_calendar_for_day
+                , patient_history
+                , patient_history_with_doctor
+                , patient_with_full_history]        
+
+
+    # ========= Specific Task methods =========
     def get_doctor_by_id(self, doctor_id: int) -> Optional["Doctor"]:
+        """Query the duckduckdb for the available doctors using doctor_id as the parameter"""
         with self.connection() as con:
             row = self._fetchone_dict(
                 con,
@@ -86,6 +147,7 @@ class DataService:
     def get_doctor_by_full_name(
         self, first_name: str, last_name: str
     ) -> Optional["Doctor"]:
+        """Query the duckduckdb for the available doctors using either first name or last name as the parameter"""
         with self.connection() as con:
             row = self._fetchone_dict(
                 con,
@@ -99,6 +161,7 @@ class DataService:
             return Doctor.from_row(row) if row else None
 
     def get_patient_by_id(self, patient_id: int) -> Optional["Patient"]:
+        """Query the duckduckdb for the patient information using patient_id as the identifier"""
         with self.connection() as con:
             row = self._fetchone_dict(
                 con,
@@ -114,6 +177,7 @@ class DataService:
     def get_patient_by_full_name(
         self, first_name: str, last_name: str
     ) -> Optional["Patient"]:
+        """Query the duckduckdb for the patients using either first name or last name as the parameter"""
         with self.connection() as con:
             row = self._fetchone_dict(
                 con,

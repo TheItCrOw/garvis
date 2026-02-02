@@ -65,8 +65,9 @@ class AgenticAssistantService:
         - If a user asks a question that requires database data, call the run_sql tool with the SQL query that you will build.
         - If you are unsure what tables/columns exist, call get_schema first.
         - Use ONLY the tool results to answer data questions; do not fabricate numbers.
-        - Keep responses brief and conversational.
-        - Avoid multiple SQL statements and do not end with semi-colon.
+        - Some of the tools require specific parameters like doctor_id, doctor names, patient names,  patient_id, etc, only execute them if you have the data already within you.
+        - Keep responses brief and conversational, unless instructed to return in specific format or template.
+        - Avoid executing multiple SQL statements in a single invocation and do not end with semi-colon.
         - Use explicit joins.
         - Adhere to ANSI-SQL standards.
         """
@@ -76,8 +77,8 @@ class AgenticAssistantService:
         self.llm_openai = ChatOpenAI(
             model=os.getenv("OPENAI_MODEL"), temperature=0
         ).bind_tools(self.return_tools())
-        if not self.graph:
 
+        if(not self.graph):
             self.graph = self.build_graph()
 
     ##################
@@ -164,12 +165,16 @@ class AgenticAssistantService:
         return resp.content
 
     def return_tools(self):
-        return [
+        tools_collection =  [
             self.get_schema,
             self.run_sql,
             self.medgemma_reasoner,
             DuckDuckGoSearchRun(),
         ]
+
+        tools_collection.extend(AgenticAssistantService._data_service.export_tools())
+
+        return tools_collection
 
     def assistant_node(self, state: AgentState) -> AgentState:
         response = self.llm_openai.invoke(
