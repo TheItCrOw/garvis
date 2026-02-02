@@ -1,29 +1,37 @@
 import duckdb
 import os
-import pandas as pd
+#import pandas as pd
 import re
 
 from dotenv import load_dotenv
-from pathlib import Path
+#from pathlib import Path
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
+#from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
-from typing import ClassVar, Annotated, TypedDict, Sequence, Optional
+from typing import ClassVar, Optional, Dict, Union
+from pydantic import BaseModel, Field, ConfigDict
 
 # from app.services.agentic_assistant_service import AgentState
 from app.core.dto.agent_state import AgentState
-from app.core.garvis_task import GarvisTask
+from app.core.garvis_task import GarvisTask, GarvisReply
 
 # import tabulate
 from threading import Lock
 from app.database.duckdb_data_service import DataService
 
+class ClientCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    view: str = Field(..., description="Client screen/view identifier (e.g., 'patient', 'doctor', 'calendar', 'chat','none').")
+    action: str = Field(..., description="Client action identifier (e.g., 'VIEW', 'LIST', 'none').")
+    parameters: Dict[str, Union[str|int]]| None
+    intent_confidence: float = Field(0.75, ge=0.0, le=1.0)
+    reasoning_short: str = Field("", description="1 short sentence rationale; no private or sensitive data.")
 
 class AgenticAssistantService:
     OLLAMA_MODEL: ClassVar[str] = "MedAIBase/MedGemma1.5:4b"
@@ -62,7 +70,7 @@ class AgenticAssistantService:
         You are a concise conversational data assistant for a DuckDB hospital database that contains sensitive and personal information.
 
         Rules:
-        - If a user asks a question that requires database data, call the run_sql tool with the SQL query that you will build.
+        - If a user asks a question that requires database data always run the get_schema first to know the correct table names then call the run_sql tool with the SQL query that you will build.
         - If you are unsure what tables/columns exist, call get_schema first.
         - Use ONLY the tool results to answer data questions; do not fabricate numbers.
         - Some of the tools require specific parameters like doctor_id, doctor names, patient names,  patient_id, etc, only execute them if you have the data already within you.
@@ -75,12 +83,53 @@ class AgenticAssistantService:
         self._load_env()
         self.im_alive = True
         self.llm_openai = ChatOpenAI(
-            model=os.getenv("OPENAI_MODEL"), temperature=0
+            model=os.getenv("OPENAI_MODEL")
+            , temperature=0
         ).bind_tools(self.return_tools())
 
         if(not self.graph):
             self.graph = self.build_graph()
 
+    def route_to_client_command(self, state: AgentState) -> AgentState:
+        ROUTER_SYSTEM_PROMPT = """\
+        You are an intent router for a client application.
+        Given the conversation, output a single JSON object matching the schema.
+        Rules:
+        - Choose the best view/action for the user's latest request.
+        - parameters must be JSON-serializable.
+        - Do NOT include extra keys beyond the schema.
+        - Your only choices for the view are only the following ["Patient","PatientHistory","Doctor","Calendar","Xray","Medicine","None"]
+            - if the intent is something like "OPEN UP THE PATIENT FILE" or "GO TO PATIENT" return "Patient"
+            - if the intent is something like "OPEN UP THE Doctor FILE" or "GO TO Doctor" return "Doctor"
+            - if the intent is something like "OPEN UP CALENDAR OF..." or "GO TO SCHEDULE of..." return "Calendar"
+            - if the intent is unclear, select "None" for view
+        - Your only choices with action are only the following ["Add","View","Update","Delete","None"]
+            - if the intent is something like "Add a calendar event" or "add a new patient record" then choose "Add"
+            - if the intent is something like "Open the patient file of patient 1" or "open calendar on Jan 23, 2026" then choose "View"
+            - if the intent is something like "List me the patients" or "I want to see all the doctors" then choose "List"
+        - If unsure, default to view="None", action="None", parameters={"mode":"chat"}.
+        """        
+        
+        # You can pass full history, or truncate to last N messages for cost control
+        #messages = state.get("messages", [])
+        #last_messages = messages[-4:]  # <-- only last 4
+        last_messages = state.get("messages", [])
+
+        router = self.llm_openai.with_structured_output(ClientCommand)
+        reply = router.invoke(
+            [{"role": "system", "content": ROUTER_SYSTEM_PROMPT}, *last_messages]
+        )
+
+        state["view"] = reply.view
+        state["action"] = reply.action
+        state["parameters"] = reply.parameters
+        state["intent_confidence"] = reply.intent_confidence
+        state["reasoning_short"] = reply.reasoning_short
+
+        # Return only the state updates you want to apply
+        return state
+    
+    
     ##################
     # i know, i know, the code looks ugly for now, but the goal is to make it work, then let's refactor later XD
 
@@ -190,7 +239,7 @@ class AgenticAssistantService:
         last_message = state_messages[-1]  # get only the last message
 
         if not last_message.tool_calls:
-            return "end"
+            return "route_to_client_command"
         else:
             return "tools"
 
@@ -201,19 +250,21 @@ class AgenticAssistantService:
         builder.add_node("tools", ToolNode(self.return_tools()))
         builder.add_edge(START, "assistant")
         builder.add_conditional_edges(
-            "assistant", self.should_continue, {"tools": "tools", "end": END}
+            "assistant", self.should_continue, {"tools": "tools", "route_to_client_command": "route_to_client_command"}
         )
         builder.add_edge("tools", "assistant")
-        return builder.compile(checkpointer=checkpointer)
+        builder.add_node("route_to_client_command",self.route_to_client_command)
+        builder.add_edge("route_to_client_command", END)
 
+        return builder.compile(checkpointer=checkpointer)   
     ###############################################################################################################################################
 
-    def chat(
-        self, user_text: str, thread_id: str = "demo", display_tool_call: bool = False
+    def _chat(
+        self, user_text: str, thread_id: str = "demo", display_tool_call: bool = True
     ) -> str:
         cfg = {"configurable": {"thread_id": thread_id}}
         final_state = self.graph.invoke(
-            {"messages": [HumanMessage(content=user_text)]}, config=cfg
+            {"messages": [HumanMessage(content=user_text)],"parameters":{"id":"id"}}, config=cfg
         )
 
         if display_tool_call:
@@ -226,12 +277,21 @@ class AgenticAssistantService:
                         )
 
         # The latest assistant message is at the end
-        return final_state["messages"][-1].content
+        return final_state["messages"][-1].content \
+                , final_state['view'] \
+                , final_state['action'] \
+                , final_state['parameters']
 
     def call_agent(self, garvis_task: GarvisTask):
-        print(garvis_task.query, garvis_task.session_id)
-        return self.chat(
+        content, view, action, parameters = self._chat(
             user_text=garvis_task.query,
             thread_id=garvis_task.session_id,
             display_tool_call=True,
         )
+        print(content, view, action, parameters)
+        return GarvisReply(garvis_task.session_id
+                           , garvis_task.query
+                           , content
+                           , view
+                           , action
+                           , parameters)

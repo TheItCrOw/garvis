@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import json
 
 @dataclass
 class GarvisTask:
@@ -9,4 +10,7 @@ class GarvisTask:
 class GarvisReply:
     session_id: str
     query: str
-    reply: str    
+    reply: str
+    view: str
+    action: str
+    parameters: json   

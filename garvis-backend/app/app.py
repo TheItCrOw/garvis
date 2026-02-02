@@ -8,7 +8,7 @@ from app.database.duckdb_data_service import DataService
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from app.core.garvis import Garvis, get_garvis
-from app.core.garvis_task import GarvisTask
+from app.core.garvis_task import GarvisTask, GarvisReply
 from app.services.agentic_assistant_service import AgenticAssistantService
 
 from app.api.ws_garvis_router import router as ws_garvis_router
@@ -55,5 +55,8 @@ async def invoke_agent(item: Item):
     return {
         "message": "Item created successfully",
         "item_name": item.session_id,
-        "agent_message": reply,
+        "agent_message": reply.reply,
+        "view": reply.view,
+        "action": reply.action,
+        "parameters": reply.parameters
     }
