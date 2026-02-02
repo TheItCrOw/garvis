@@ -1,4 +1,4 @@
-from app.core.garvis_task import GarvisTask
+from app.core.dto.garvis_task import GarvisTask
 from app.database.duckdb_data_service import DataService
 from app.services.agentic_assistant_service import AgenticAssistantService
 

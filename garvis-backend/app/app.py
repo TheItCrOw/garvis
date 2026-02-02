@@ -1,20 +1,17 @@
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.health import router as health_router
 from app.api.calendar import router as calendar_router
 from app.api.patient import router as patients_router
 from app.database.duckdb_data_service import DataService
-from contextlib import asynccontextmanager
 from pydantic import BaseModel
-from app.core.garvis import Garvis, get_garvis
-from app.core.garvis_task import GarvisTask, GarvisReply
-from app.services.agentic_assistant_service import AgenticAssistantService
+from app.core.garvis import get_garvis
+from app.core.dto.garvis_task import GarvisTask
 
 from app.api.ws_garvis_router import router as ws_garvis_router
 
 load_dotenv()
-
 
 app = FastAPI(title="Garvis Backend", version="0.1.0")
 

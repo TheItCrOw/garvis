@@ -1,27 +1,23 @@
 import duckdb
 import os
-#import pandas as pd
 import re
 
 from dotenv import load_dotenv
-#from pathlib import Path
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, START, END
-#from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from typing import ClassVar, Optional, Dict, Union
 from pydantic import BaseModel, Field, ConfigDict
 
-# from app.services.agentic_assistant_service import AgentState
 from app.core.dto.agent_state import AgentState
-from app.core.garvis_task import GarvisTask, GarvisReply
+from app.core.dto.garvis_task import GarvisTask
+from app.core.dto.garvis_reply import GarvisReply
 
-# import tabulate
 from threading import Lock
 from app.database.duckdb_data_service import DataService
 
@@ -57,11 +53,9 @@ class AgenticAssistantService:
         cls._data_service = data_service
 
     def _load_env(self):
-        print(".env loaded!" if load_dotenv() else ".env not existing!")
-        print(os.getenv("OPENAI_MODEL"))
+        load_dotenv()
 
     def __init__(self):
-        print("Instantiating again!")
         self.llm_ollama = AgenticAssistantService.get_ollama()
         self.llm_openai = None
         self.graph = None
@@ -130,9 +124,6 @@ class AgenticAssistantService:
         return state
     
     
-    ##################
-    # i know, i know, the code looks ugly for now, but the goal is to make it work, then let's refactor later XD
-
     def _sanitize_sql(sql: str) -> str:
 
         _SQL_DISALLOWED = re.compile(
@@ -286,7 +277,7 @@ class AgenticAssistantService:
         content, view, action, parameters = self._chat(
             user_text=garvis_task.query,
             thread_id=garvis_task.session_id,
-            display_tool_call=True,
+            display_tool_call=False,
         )
         print(content, view, action, parameters)
         return GarvisReply(garvis_task.session_id
