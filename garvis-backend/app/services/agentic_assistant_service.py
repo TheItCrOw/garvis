@@ -1,27 +1,24 @@
-import duckdb
+import app.constants.agentic_assistant_constants as agent_constants
+import app.utils.agent_utils as agent_utils
 import os
-import re
+
+from app.core.dto.agent_state import AgentState
+from app.core.dto.garvis_dtos import GarvisReply, GarvisTask
+from app.database.duckdb_data_service import DataService
+from app.schemas.client_command import ClientCommand
 
 from dotenv import load_dotenv
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import tool
+
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
-from typing import ClassVar, Optional
-
-from app.core.dto.agent_state import AgentState
-from app.core.dto.garvis_task import GarvisTask
-from app.core.dto.garvis_reply import GarvisReply
-import app.constants.agentic_assistant as agent_constants
-
 from threading import Lock
-from app.database.duckdb_data_service import DataService
-from app.schemas.client_command import ClientCommand
-
+from typing import ClassVar, Optional
 
 class AgenticAssistantService:
     OLLAMA_MODEL: ClassVar[str] = "MedAIBase/MedGemma1.5:4b"
@@ -56,76 +53,17 @@ class AgenticAssistantService:
 
         self._load_env()
         self.im_alive = True
-        self.llm_openai = ChatOpenAI(
-            model=os.getenv("OPENAI_MODEL")
-            , temperature=0
-        ).bind_tools(self.return_tools())
+        self.llm_openai = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0).bind_tools(self.return_tools())
 
         if(not self.graph):
             self.graph = self.build_graph()
-
-    def route_to_client_command(self, state: AgentState) -> AgentState:
-        # You can pass full history, or truncate to last N messages for cost control
-        #messages = state.get("messages", [])
-        #last_messages = messages[-4:]  # <-- only last 4
-        last_messages = state.get("messages", [])
-
-        router = self.llm_openai.with_structured_output(ClientCommand)
-        reply = router.invoke(
-            [{"role": "system", "content": agent_constants.ROUTER_SYSTEM_PROMPT}, *last_messages]
-        )
-
-        state["view"] = reply.view
-        state["action"] = reply.action
-        state["parameters"] = reply.parameters
-        state["intent_confidence"] = reply.intent_confidence
-        state["reasoning_short"] = reply.reasoning_short
-
-        # Return only the state updates you want to apply
-        return state
-    
-    
-    def _sanitize_sql(sql: str) -> str:
-
-        _SQL_DISALLOWED = re.compile(agent_constants.DISALLOWED_SQL,re.IGNORECASE)
-
-        sql = (sql or "").strip().strip("`")
-        sql = re.sub(r"^```(sql)?\s*|\s*```$", "", sql, flags=re.IGNORECASE).strip()
-
-        # block multi-statements
-        if ";" in sql:
-            raise ValueError("Only a single SQL statement is allowed (no semicolons).")
-
-        if _SQL_DISALLOWED.search(sql):
-            raise ValueError("Only read-only queries are allowed (SELECT / WITH).")
-
-        if not re.match(r"^(SELECT|WITH)\b", sql, flags=re.IGNORECASE):
-            raise ValueError("Query must start with SELECT or WITH.")
-
-        # keep results manageable
-        if not re.search(r"\bLIMIT\b", sql, flags=re.IGNORECASE):
-            sql = f"{sql}\nLIMIT 200"
-        return sql
-
-    def _schema_markdown(conn: duckdb.DuckDBPyConnection) -> str:
-        tables = [r[0] for r in conn.execute("SHOW TABLES").fetchall()]
-        if not tables:
-            return "(no tables found)"
-        out = []
-        for t in tables:
-            cols = conn.execute(f"DESCRIBE {t}").fetchall()
-            out.append(f"### {t}")
-            for c in cols:
-                out.append(f"- {c[0]}: {c[1]}")
-            out.append("")
-        return "\n".join(out).strip()
-
+ 
     @tool
     def get_schema() -> str:
         """Return the DuckDB schema information (tables and columns) in a compact format."""
 
         with AgenticAssistantService._data_service.connection() as con:
-            database_markdown = AgenticAssistantService._schema_markdown(con)
+            database_markdown = agent_utils.schema_markdown(con)
 
         return database_markdown
 
@@ -134,7 +72,7 @@ class AgenticAssistantService:
         """
         Execute a read-only SQL query (SELECT/WITH) against DuckDB and return results as markdown.
         """
-        sql = AgenticAssistantService._sanitize_sql(query)
+        sql = agent_utils.sanitize_sql(query)
 
         with AgenticAssistantService._data_service.connection() as con:
             df = con.execute(sql).df()
@@ -168,7 +106,7 @@ class AgenticAssistantService:
             DuckDuckGoSearchRun(),
         ]
 
-        tools_collection.extend(AgenticAssistantService._data_service.export_tools())
+        tools_collection.extend(AgenticAssistantService._data_service.return_tools())
 
         return tools_collection
 
@@ -189,6 +127,27 @@ class AgenticAssistantService:
             return "route_to_client_command"
         else:
             return "tools"
+
+    def route_to_client_command(self, state: AgentState) -> AgentState:
+        # You can pass full history, or truncate to last N messages for cost control
+        #messages = state.get("messages", [])
+        #last_messages = messages[-4:]  # <-- only last 4
+        last_messages = state.get("messages", [])
+
+        router = self.llm_openai.with_structured_output(ClientCommand)
+        reply = router.invoke(
+            [{"role": "system", "content": agent_constants.ROUTER_SYSTEM_PROMPT}, *last_messages]
+        )
+
+        state["view"] = reply.view
+        state["action"] = reply.action
+        state["parameters"] = reply.parameters
+        state["intent_confidence"] = reply.intent_confidence
+        state["reasoning_short"] = reply.reasoning_short
+        state["intent_confidence"] = reply.intent_confidence
+
+        # Return only the state updates you want to apply
+        return state
 
     def build_graph(self):
         checkpointer = InMemorySaver()
@@ -226,10 +185,11 @@ class AgenticAssistantService:
         return final_state["messages"][-1].content \
                 , final_state['view'] \
                 , final_state['action'] \
-                , final_state['parameters']
+                , final_state['parameters'] \
+                , final_state['intent_confidence']
 
     def call_agent(self, garvis_task: GarvisTask):
-        content, view, action, parameters = self._chat(
+        content, view, action, parameters, intent_confidence = self._chat(
             user_text=garvis_task.query,
             thread_id=garvis_task.session_id,
             display_tool_call=False,
@@ -240,4 +200,5 @@ class AgenticAssistantService:
                            , content
                            , view
                            , action
-                           , parameters)
+                           , parameters
+                           , intent_confidence)

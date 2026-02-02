@@ -9,3 +9,9 @@ class GarvisReply:
     view: str
     action: str
     parameters: json   
+    intent_confidence: float
+
+@dataclass
+class GarvisTask:
+    session_id: str
+    query: str

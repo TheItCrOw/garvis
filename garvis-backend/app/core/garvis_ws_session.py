@@ -23,7 +23,7 @@ from google.cloud import speech
 from uuid import uuid4
 
 from app.core.garvis import get_garvis
-from app.core.dto.garvis_task import GarvisTask
+from app.core.dto.garvis_dtos import GarvisTask
 from app.utils.date_utils import get_day_info
 from app.utils.string_utils import normalize_text
 

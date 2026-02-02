@@ -5,11 +5,11 @@ from app.api.health import router as health_router
 from app.api.calendar import router as calendar_router
 from app.api.patient import router as patients_router
 from app.database.duckdb_data_service import DataService
-from pydantic import BaseModel
+from app.core.dto.garvis_dtos import GarvisTask
 from app.core.garvis import get_garvis
-from app.core.dto.garvis_task import GarvisTask
-
 from app.api.ws_garvis_router import router as ws_garvis_router
+from pydantic import BaseModel
+
 
 load_dotenv()
 
@@ -55,5 +55,6 @@ async def invoke_agent(item: Item):
         "agent_message": reply.reply,
         "view": reply.view,
         "action": reply.action,
-        "parameters": reply.parameters
+        "parameters": reply.parameters,
+        "intent_confidence": reply.intent_confidence
     }

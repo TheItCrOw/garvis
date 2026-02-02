@@ -68,75 +68,6 @@ class DataService:
         with self.connection() as con:
             return con.execute("SELECT COUNT(*) FROM patient").fetchone()[0]
 
-    def export_tools(self):
-        @tool
-        def doctor_by_id(doctor_id: int) -> Optional["Doctor"]:
-            """Query the duckduckdb for the available doctors using doctor_id as the parameter.
-            Only query this table when explicitly instructed."""
-            return self.get_doctor_by_id(doctor_id)
-
-        @tool
-        def doctor_by_full_name(doctor_id: int) -> Optional["Doctor"]:
-            """Query the duckduckdb for the available doctors using doctor_id as the parameter.
-            Only query this table when explicitly instructed."""
-            return self.get_doctor_by_full_name(doctor_id)
-
-        @tool
-        def patient_by_id(patient_id: int) -> Optional["Patient"]:
-            """Query the duckduckdb for the patient information using patient_id as the parameter.
-            Only query this table when explicitly instructed."""
-            return self.get_patient_by_id(patient_id)
-
-        @tool
-        def patient_by_full_name(
-            first_name: str, last_name: str
-        ) -> Optional["Patient"]:
-            """Query the duckduckdb for the patients using first name and last name as the parameters.
-            Only query this table when explicitly instructed."""
-            return self.get_patient_by_full_name(first_name, last_name)
-
-        @tool
-        def doctor_calendar_for_day(
-            doctor_id: int, day: Optional[date] = None
-        ) -> List["CalendarEntry"]:
-            """Query the duckduckdb for the calendar and scheduled activities of a doctor using doctor_id and with an optional date parameters.
-             Full calendar (all entries) for a doctor on a given day.
-             Default day: today in Europe/Berlin.
-            Only query this table when explicitly instructed."""
-            return self.get_doctor_calendar_for_day(doctor_id, day)
-
-        @tool
-        def patient_history(patient_id: int) -> List["PatientHistory"]:
-            """Query the duckduckdb for a specific patient's history using the patient_id as parameter.
-            Only query this table when explicitly instructed."""
-            return self.get_patient_history(patient_id)
-
-        @tool
-        def patient_history_with_doctor(
-            patient_id: int, doctor_id: int
-        ) -> List["PatientHistory"]:
-            """Query the duckduckdb for a specific patient's history with a doctor using the patient_id and doctor_id as parameters.
-            Only query this table when explicitly instructed."""
-            return self.get_patient_history_with_doctor(patient_id, doctor_id)
-
-        @tool
-        def patient_with_full_history(patient_id: int) -> Optional[Dict[str, Any]]:
-            """Query the duckduckdb for a specific patient's history using the patient_id.
-            Only query this table when explicitly instructed."""
-            return self.get_patient_with_full_history(patient_id)
-
-        # return the tools
-        return [
-            doctor_by_id,
-            doctor_by_full_name,
-            patient_by_id,
-            patient_by_full_name,
-            doctor_calendar_for_day,
-            patient_history,
-            patient_history_with_doctor,
-            patient_with_full_history,
-        ]
-
     # ========= Specific Task methods =========
     def get_doctor_by_id(self, doctor_id: int) -> Optional["Doctor"]:
         """Query the duckduckdb for the available doctors using doctor_id as the parameter"""
@@ -499,3 +430,74 @@ class DataService:
         with self.connection() as con:
             row = self._fetchone_dict(con, sql, tuple(params))
             return Patient.from_row(row) if row else None
+
+    #TOOOOOOOOOOOOOOOLS
+
+    def return_tools(self):
+        @tool
+        def doctor_by_id(doctor_id: int) -> Optional["Doctor"]:
+            """Query the duckduckdb for the available doctors using doctor_id as the parameter.
+            Only query this table when explicitly instructed."""
+            return self.get_doctor_by_id(doctor_id)
+
+        @tool
+        def doctor_by_full_name(doctor_id: int) -> Optional["Doctor"]:
+            """Query the duckduckdb for the available doctors using doctor_id as the parameter.
+            Only query this table when explicitly instructed."""
+            return self.get_doctor_by_full_name(doctor_id)
+
+        @tool
+        def patient_by_id(patient_id: int) -> Optional["Patient"]:
+            """Query the duckduckdb for the patient information using patient_id as the parameter.
+            Only query this table when explicitly instructed."""
+            return self.get_patient_by_id(patient_id)
+
+        @tool
+        def patient_by_full_name(
+            first_name: str, last_name: str
+        ) -> Optional["Patient"]:
+            """Query the duckduckdb for the patients using first name and last name as the parameters.
+            Only query this table when explicitly instructed."""
+            return self.get_patient_by_full_name(first_name, last_name)
+
+        @tool
+        def doctor_calendar_for_day(
+            doctor_id: int, day: Optional[date] = None
+        ) -> List["CalendarEntry"]:
+            """Query the duckduckdb for the calendar and scheduled activities of a doctor using doctor_id and with an optional date parameters.
+             Full calendar (all entries) for a doctor on a given day.
+             Default day: today in Europe/Berlin.
+            Only query this table when explicitly instructed."""
+            return self.get_doctor_calendar_for_day(doctor_id, day)
+
+        @tool
+        def patient_history(patient_id: int) -> List["PatientHistory"]:
+            """Query the duckduckdb for a specific patient's history using the patient_id as parameter.
+            Only query this table when explicitly instructed."""
+            return self.get_patient_history(patient_id)
+
+        @tool
+        def patient_history_with_doctor(
+            patient_id: int, doctor_id: int
+        ) -> List["PatientHistory"]:
+            """Query the duckduckdb for a specific patient's history with a doctor using the patient_id and doctor_id as parameters.
+            Only query this table when explicitly instructed."""
+            return self.get_patient_history_with_doctor(patient_id, doctor_id)
+
+        @tool
+        def patient_with_full_history(patient_id: int) -> Optional[Dict[str, Any]]:
+            """Query the duckduckdb for a specific patient's history using the patient_id.
+            Only query this table when explicitly instructed."""
+            return self.get_patient_with_full_history(patient_id)
+
+        # return the tools
+        return [
+            doctor_by_id,
+            doctor_by_full_name,
+            patient_by_id,
+            patient_by_full_name,
+            doctor_calendar_for_day,
+            patient_history,
+            patient_history_with_doctor,
+            patient_with_full_history,
+        ]
