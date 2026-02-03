@@ -431,7 +431,7 @@ class DataService:
             row = self._fetchone_dict(con, sql, tuple(params))
             return Patient.from_row(row) if row else None
 
-    #TOOOOOOOOOOOOOOOLS
+    #TOOOOOOO...OOOOOOOOLS
 
     def return_tools(self):
         @tool
@@ -539,15 +539,118 @@ class DataService:
                                                       , status=status
                                                       , notes=notes)
 
+        @tool
+        def tool_add_patient_history(
+            patient_id: int,
+            doctor_id: int,
+            event_type: str,
+            event_start_at: datetime,
+            event_end_at: Optional[datetime] = None,
+            chief_complaint: Optional[str] = None,
+            diagnosis_summary: Optional[str] = None,
+            procedure_performed: Optional[str] = None,
+            prescription_given: Optional[str] = None,
+            notes: Optional[str] = None,
+            outcome: Optional[str] = None,
+            follow_up_required: Optional[bool] = None,
+            severity: Optional[str] = None,
+            created_at: Optional[datetime] = None,
+        ) -> "PatientHistory":        
+            """
+            Add a new patient history event.
+            Ensure that the required fields have values and confirm them from the user before adding.
+            Returns the created PatientHistory row. Only invoke this tool if the intent is clear
+            """
+            return self.add_patient_history(
+                patient_id=patient_id
+                ,doctor_id= doctor_id
+                ,event_type=event_type
+                ,event_start_at=event_start_at
+                ,event_end_at=event_end_at
+                ,chief_complaint=chief_complaint
+                ,diagnosis_summary=diagnosis_summary
+                ,procedure_performed=procedure_performed
+                ,prescription_given=prescription_given
+                ,notes=notes
+                ,outcome=outcome
+                ,follow_up_required=follow_up_required
+                ,severity=severity
+                ,created_at=created_at
+            )
+
+        @tool
+        def tool_update_patient_address(
+                patient_id: int,
+                address_line1: Optional[str] = None,
+                address_line2: Optional[str] = None,
+                city: Optional[str] = None,
+                state: Optional[str] = None,
+                postal_code: Optional[str] = None,
+                country: Optional[str] = None,
+            ) -> Optional["Patient"]:        
+            """
+            Update patient address fields. Only updates the fields you pass (non-None).
+            Also updates updated_at to now.
+            Returns the updated Patient or None if patient_id not found.
+            """
+            
+            self.update_patient_address(
+                patient_id= patient_id,
+                address_line1=address_line1,
+                address_line2=address_line2,
+                city=city,
+                state=state,
+                postal_code=postal_code,
+                country=country
+            )
+
+        @tool
+        def tool_prescribe_medication(
+            patient_id: int,
+            doctor_id: int,
+            medication: str,
+            event_start_at: Optional[datetime] = None,
+            event_end_at: Optional[datetime] = None,
+            diagnosis_summary: Optional[str] = None,
+            chief_complaint: Optional[str] = None,
+            notes: Optional[str] = None,
+            severity: Optional[str] = None,
+            follow_up_required: Optional[bool] = True,
+            outcome: Optional[str] = None,
+        ) -> "PatientHistory":
+            """
+            Prescribe a medication to a patient.
+            This is modeled as creating a patient_history entry
+            with prescription_given filled.
+            """
+
+            return self.prescribe_medication(
+                patient_id=patient_id
+                , doctor_id=doctor_id
+                , medication=medication
+                , event_start_at=event_start_at
+                , event_end_at=event_end_at
+                , diagnosis_summary=diagnosis_summary
+                , chief_complaint=chief_complaint
+                , notes=notes
+                , severity=severity
+                , follow_up_required=follow_up_required
+                , outcome=outcome
+            ) 
+
+
         # return the tools
         return [
-            doctor_by_id,
-            doctor_by_full_name,
-            patient_by_id,
-            patient_by_full_name,
-            doctor_calendar_for_day,
-            patient_history,
-            patient_history_with_doctor,
-            patient_with_full_history,
-            tool_add_calendar_entry,
+            doctor_by_id
+            , doctor_by_full_name
+            , patient_by_id
+            , patient_by_full_name
+            , doctor_calendar_for_day
+            , patient_history
+            , patient_history_with_doctor
+            , patient_with_full_history
+            , tool_add_calendar_entry
+            , tool_add_patient_history
+            , tool_update_patient_address
+            , tool_prescribe_medication
         ]
