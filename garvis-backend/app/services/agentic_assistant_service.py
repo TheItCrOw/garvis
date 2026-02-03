@@ -187,8 +187,7 @@ class AgenticAssistantService:
                             f"Tool Call: #{index+1}| Name: {tool_call["name"]}| Args: {tool_call["args"]}"
                         )
 
-        # The latest assistant message is at the end
-        return final_state["messages"][-1].content \
+        return final_state["messages"][-1].content[-1]["text"] if self._llm_flavor == "GOOGLE" else final_state["messages"][-1].content \
                 , final_state['view'] \
                 , final_state['action'] \
                 , final_state['parameters'] \
