@@ -14,7 +14,7 @@ from langchain_core.tools import tool
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
-from langchain_google_genai import ChatGoogleGenerativeAI #will try soon :)
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from threading import Lock
@@ -41,21 +41,23 @@ class AgenticAssistantService:
     def initialize(cls, data_service: DataService):
         cls._data_service = data_service
 
-    def _initialize_orchestrating_llm(self):
+    def _get_tool_method_call(self):
+        return "function_calling" if self._llm_flavor() == "GOOGLE" else "json_schema"     
+    
+    def _initialize_orchestrating_llms(self):
         self._llm_flavor = os.getenv("LLM_FLAVOR")
-        print(self._llm_flavor)
-        if(os.getenv("LLM_FLAVOR") == "GOOGLE"):
+        if(self._llm_flavor == "GOOGLE"):
             self._orchestrating_llm_with_tools =  ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL"),temperature=0,timeout=120,max_retries=2).bind_tools(self.return_tools())
             self._llm_with_no_tools = ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL"),temperature=0,timeout=120,max_retries=2)
         else:
-            self._orchestrating_llm_with_tools = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0,timeout=120).bind_tools(self.return_tools())
-            self._llm_with_no_tools = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0,timeout=120)
+            self._orchestrating_llm_with_tools = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0,timeout=120,max_retries=2).bind_tools(self.return_tools())
+            self._llm_with_no_tools = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0,timeout=120,max_retries=2)
 
     def __init__(self):
         self.llm_ollama = AgenticAssistantService.get_ollama()
         self._graph = None
         self.im_alive = True
-        self._initialize_orchestrating_llm()
+        self._initialize_orchestrating_llms()
 
         if(not self._graph):
             self._graph = self._build_graph()
@@ -117,7 +119,6 @@ class AgenticAssistantService:
         response = self._orchestrating_llm_with_tools.invoke(
             [SystemMessage(content=agent_constants.SYSTEM_PROMPT)] + state["messages"]
         )
-        print(response)
         state["messages"] = state["messages"] + [response]
         return state
 
@@ -132,13 +133,13 @@ class AgenticAssistantService:
 
     def _route_to_client_command(self, state: AgentState) -> AgentState:
         # You can pass full history, or truncate to last N messages for cost control
-        #messages = state.get("messages", [])
+        #messages = state.get("messages", [])s
         #last_n_messages = len(messages) if len(messages) < 4 else 4
         #last_messages = messages[-last_n_messages:]  # <-- only last 4
         
         last_messages = state.get("messages", [])
+        router = self._llm_with_no_tools.with_structured_output(ClientCommand, method= self._get_tool_method_call())
 
-        router = self._llm_with_no_tools.with_structured_output(ClientCommand)
         reply = router.invoke(
             [{"role": "system", "content": agent_constants.ROUTER_SYSTEM_PROMPT}, *last_messages]
         )
@@ -148,10 +149,11 @@ class AgenticAssistantService:
         state["parameters"] = reply.parameters
         state["intent_confidence"] = reply.intent_confidence
         state["reasoning_short"] = reply.reasoning_short
-        state["intent_confidence"] = reply.intent_confidence
 
-        # Return only the state updates you want to apply
+        # Return only the state updates you want to apply 
         return state
+
+
 
     def _build_graph(self):
         checkpointer = InMemorySaver()
