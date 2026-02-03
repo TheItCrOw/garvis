@@ -44,10 +44,10 @@ class AgenticAssistantService:
     def _initialize_orchestrating_llms(self):
         self._llm_flavor = os.getenv("LLM_FLAVOR")
         if(self._llm_flavor == "GOOGLE"):
-            self._orchestrating_llm_with_tools =  ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL"),temperature=0,timeout=120,max_retries=2).bind_tools(self.return_tools())
+            self._orchestrating_llm_with_tools =  ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL"),temperature=0,timeout=120,max_retries=2).bind_tools(self.return_tools(), strict=True)
             self._llm_with_no_tools = ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL"),temperature=0,timeout=120,max_retries=2)
         else:
-            self._orchestrating_llm_with_tools = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0,timeout=120,max_retries=2).bind_tools(self.return_tools())
+            self._orchestrating_llm_with_tools = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0,timeout=120,max_retries=2).bind_tools(self.return_tools(), strict=True)
             self._llm_with_no_tools = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0,timeout=120,max_retries=2)
 
     def __init__(self):
@@ -188,7 +188,10 @@ class AgenticAssistantService:
                             f"Tool Call: #{index+1}| Name: {tool_call["name"]}| Args: {tool_call["args"]}"
                         )
 
-        return final_state["messages"][-1].content[-1]["text"] if self._llm_flavor == "GOOGLE" else final_state["messages"][-1].content \
+        # google llms wrap their messages in a list of dicts with a "text" key
+        content = final_state["messages"][-1].content[-1]["text"] if self._llm_flavor == "GOOGLE" else final_state["messages"][-1].content
+
+        return  content \
                 , final_state['view'] \
                 , final_state['action'] \
                 , final_state['parameters'] \

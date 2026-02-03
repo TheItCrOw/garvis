@@ -34,6 +34,7 @@ SYSTEM_PROMPT = """
         - If a user asks a question that requires database data always run the get_schema first to know the correct table names then call the run_sql tool with the SQL query that you will build.
         - If you are unsure what tables/columns exist, call get_schema first.
         - Use ONLY the tool results to answer data questions; do not fabricate numbers.
+        - Only use the tools that can insert, update, and delete records into the database when the intent is clear and the necessary parameters have been given.
         - Some of the tools require specific parameters like doctor_id, doctor names, patient names,  patient_id, etc, only execute them if you have the data already within you.
         - Keep responses brief and conversational, unless instructed to return in specific format or template.
         - Avoid executing multiple SQL statements in a single invocation and do not end with semi-colon.

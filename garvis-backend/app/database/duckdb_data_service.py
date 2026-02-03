@@ -490,6 +490,55 @@ class DataService:
             Only query this table when explicitly instructed."""
             return self.get_patient_with_full_history(patient_id)
 
+        @tool
+        def tool_add_calendar_entry(
+            doctor_id: int,
+            patient_id: int,
+            start_at: datetime,
+            end_at: datetime,
+            entry_type: Literal[
+                "consultation",
+                "emergency",
+                "surgery",
+                "prescription",
+                "follow_up",
+                "hospitalization",
+                "referral",
+            ],
+            title: str,
+            location: Optional[
+                Literal[
+                    "Clinic Room 1",
+                    "Clinic Room 2",
+                    "Clinic Room 3",
+                    "Radiology",
+                    "OR 1",
+                    "OR 2",
+                    "Online",
+                    "Conference Room",
+                ]
+            ] = None,
+            priority: str = "normal",
+            status: str = "scheduled",
+            notes: Optional[str] = None,
+        ) -> "CalendarEntry":
+            """
+            Add a calendar entry for a doctor with a patient.
+            Ensure that the required fields have values and confirm them from the user before adding.
+            Returns the created CalendarEntry row. Only invoke this tool if the intent is clear
+            """
+
+            return self.add_calendar_entry(doctor_id=doctor_id
+                                                      , patient_id=patient_id
+                                                      , start_at=start_at
+                                                      , end_at=end_at
+                                                      , entry_type=entry_type
+                                                      , title=title
+                                                      , location=location
+                                                      , priority=priority
+                                                      , status=status
+                                                      , notes=notes)
+
         # return the tools
         return [
             doctor_by_id,
@@ -500,4 +549,5 @@ class DataService:
             patient_history,
             patient_history_with_doctor,
             patient_with_full_history,
+            tool_add_calendar_entry,
         ]

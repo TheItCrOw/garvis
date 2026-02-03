@@ -1,3 +1,5 @@
+import os
+
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,9 +32,8 @@ app.include_router(health_router, prefix="/api")
 app.include_router(calendar_router, prefix="/api")
 app.include_router(patients_router, prefix="/api")
 ds = DataService()
-print("Total Patients", ds.count_patients())
+print(f"LLM Flavor: {os.getenv("LLM_FLAVOR")}")
 garvis = get_garvis()
-
 
 @app.get("/")
 def root():
