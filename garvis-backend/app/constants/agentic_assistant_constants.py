@@ -23,7 +23,8 @@ ROUTER_SYSTEM_PROMPT = """\
             - if the intent is something like "Add a calendar event" or "add a new patient record" then choose "Add"
             - if the intent is something like "Open the patient file of patient 1" or "open calendar on Jan 23, 2026" then choose "View"
             - if the intent is something like "List me the patients" or "I want to see all the doctors" then choose "List"
-        - If unsure, default to view="None", action="None", parameters={"mode":"chat"}.
+        - If there is an intent but it was unclear and not enough instructions were give, default to {view="None", action="None", parameters={"mode":"clarify"}}
+        - Else default to {view="None", action="None", parameters={"mode":"chat"}}
         """    
 
 SYSTEM_PROMPT = """

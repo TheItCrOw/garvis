@@ -14,7 +14,7 @@ from langchain_core.tools import tool
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
-#from langchain_google_genai import ChatGoogleGenerativeAI #will try soon
+from langchain_google_genai import ChatGoogleGenerativeAI #will try soon :)
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from threading import Lock
@@ -41,13 +41,21 @@ class AgenticAssistantService:
     def initialize(cls, data_service: DataService):
         cls._data_service = data_service
 
+    def _initialize_orchestrating_llm(self):
+        self._llm_flavor = os.getenv("LLM_FLAVOR")
+        print(self._llm_flavor)
+        if(os.getenv("LLM_FLAVOR") == "GOOGLE"):
+            self._orchestrating_llm_with_tools =  ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL"),temperature=0,timeout=60,max_retries=2).bind_tools(self.return_tools())
+            self._llm_with_no_tools = ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL"),temperature=0,timeout=60,max_retries=2)
+        else:
+            self._orchestrating_llm_with_tools = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0).bind_tools(self.return_tools())
+            self._llm_with_no_tools = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0)
+
     def __init__(self):
         self.llm_ollama = AgenticAssistantService.get_ollama()
         self._graph = None
-
         self.im_alive = True
-        self.llm_openai_with_tools = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0).bind_tools(self.return_tools())
-        self.llm_openai_vanilla = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0)
+        self._initialize_orchestrating_llm()
 
         if(not self._graph):
             self._graph = self._build_graph()
@@ -90,6 +98,7 @@ class AgenticAssistantService:
                 HumanMessage(content=task),
             ]
         )
+
         return resp.content
 
     def return_tools(self):
@@ -105,9 +114,10 @@ class AgenticAssistantService:
         return tools_collection
 
     def _assistant_node(self, state: AgentState) -> AgentState:
-        response = self.llm_openai_with_tools.invoke(
+        response = self._orchestrating_llm_with_tools.invoke(
             [SystemMessage(content=agent_constants.SYSTEM_PROMPT)] + state["messages"]
         )
+
         state["messages"] = state["messages"] + [response]
         return state
 
@@ -128,7 +138,7 @@ class AgenticAssistantService:
         
         last_messages = state.get("messages", [])
 
-        router = self.llm_openai_vanilla.with_structured_output(ClientCommand)
+        router = self._llm_with_no_tools.with_structured_output(ClientCommand)
         reply = router.invoke(
             [{"role": "system", "content": agent_constants.ROUTER_SYSTEM_PROMPT}, *last_messages]
         )
