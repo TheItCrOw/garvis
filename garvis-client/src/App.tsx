@@ -4,6 +4,7 @@ import Navbar from "./components/Navbar/Navbar";
 import Home from "./components/Home/Home";
 import GarvisButton from "./garvis/GarvisButton";
 import Landing from "./components/Landing/Landing";
+import type { GarvisInstruction } from "./models/websocket/messages";
 
 function About() {
   return <div className="container mt-4">About Garvis</div>;
@@ -16,6 +17,8 @@ function Settings() {
 function App() {
   // always start locked => overlay always shows on fresh open / reload
   const [unlocked, setUnlocked] = useState(false);
+  const [garvisInstruction, setGarvisInstruction] =
+    useState<GarvisInstruction | null>(null);
 
   const enterApp = async () => {
     setUnlocked(true);
@@ -26,13 +29,22 @@ function App() {
       <Navbar />
 
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route
+          path="/"
+          element={<Home garvisInstruction={garvisInstruction} />}
+        />
         <Route path="/about" element={<About />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
 
       {/* Only mount Garvis after the landing page is gone */}
-      {unlocked && <GarvisButton />}
+      {unlocked && (
+        <GarvisButton
+          onGarvisInstruction={(instruction) =>
+            setGarvisInstruction(instruction)
+          }
+        />
+      )}
 
       {/* Fullscreen overlay on top of everything until unlocked */}
       {!unlocked && <Landing onEnter={enterApp} />}

@@ -14,6 +14,13 @@ type PatientFileProps = {
   patient?: Patient | null;
   patient_id?: number | null;
 
+  /**
+   * If provided, PatientHistoryPopup becomes "controlled" from the outside.
+   * If omitted, PatientFile controls history popup internally (button still works).
+   */
+  historyIsOpen?: boolean;
+  onHistoryClose?: () => void;
+
   className?: string;
 };
 
@@ -22,19 +29,39 @@ export default function PatientFile({
   onClose,
   patient,
   patient_id,
+  historyIsOpen,
+  onHistoryClose,
   className,
 }: PatientFileProps) {
   const [fetchedPatient, setFetchedPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [openHistory, setOpenHistory] = useState(false);
-  const [patientId, setPatientId] = useState<number | null>(null);
+  // Internal history state (used only when not controlled from outside)
+  const [openHistoryInternal, setOpenHistoryInternal] = useState(false);
 
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [animateOpen, setAnimateOpen] = useState(false);
 
   const data = patient ?? fetchedPatient;
+
+  // Decide whether history popup is controlled or internal
+  const historyIsControlled = historyIsOpen !== undefined;
+  const historyOpen = historyIsControlled ? historyIsOpen : openHistoryInternal;
+
+  const closeHistory = () => {
+    if (historyIsControlled) onHistoryClose?.();
+    else setOpenHistoryInternal(false);
+  };
+
+  const openHistory = () => {
+    if (historyIsControlled) {
+      // controlled from outside: parent decides when to open
+      // (optionally you could add an onHistoryOpen callback)
+      return;
+    }
+    setOpenHistoryInternal(true);
+  };
 
   // Mount/unmount + ensure open animation plays
   useEffect(() => {
@@ -101,6 +128,13 @@ export default function PatientFile({
     return () => window.removeEventListener("keydown", handler);
   }, [isOpen, onClose]);
 
+  // Optional: if the PatientFile closes, also close internal history (controlled history is parent's job)
+  useEffect(() => {
+    if (!isOpen && !historyIsControlled) {
+      setOpenHistoryInternal(false);
+    }
+  }, [isOpen, historyIsControlled]);
+
   if (!shouldRender) return null;
 
   const overlayStateClass = animateOpen ? "pf-open" : "pf-closed";
@@ -109,9 +143,9 @@ export default function PatientFile({
     <>
       {/* The patient history popup which can be opened. */}
       <PatientHistoryPopup
-        isOpen={openHistory}
-        patient_id={patientId}
-        onClose={() => setOpenHistory(false)}
+        isOpen={historyOpen}
+        patient_id={data?.patient_id ?? patient_id ?? null}
+        onClose={closeHistory}
       />
 
       {/* The actual file */}

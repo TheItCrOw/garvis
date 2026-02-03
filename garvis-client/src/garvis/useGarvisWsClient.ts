@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GarvisWsClient } from "./GarvisWsClient";
-import { createWsStartRecordingContent } from "../models/websocket/messages";
+import { createWsStartRecordingContent, GarvisOpenView, type GarvisInstruction } from "../models/websocket/messages";
 import { playB64Audio, stopCurrentAudio } from "./audioUtils"
 
 type UseGarvisWsClientOptions = {
     wsUrl: string;
+    onGarvisInstruction: (instruction: GarvisInstruction) => void;
 };
 
-export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
+export function useGarvisWsClient({ wsUrl, onGarvisInstruction }: UseGarvisWsClientOptions) {
     const [isRecording, setIsRecording] = useState(false);
     const [garvisIsSpeaking, setGarvisIsSpeaking] = useState(false);
     const [garvisIsThinking, setGarvisIsThinking] = useState(false);
@@ -47,6 +48,25 @@ export function useGarvisWsClient({ wsUrl }: UseGarvisWsClientOptions) {
             // Stop any speech that is currently playing
             stopCurrentAudio();
             setGarvisIsThinking(false);
+
+            // If Garvis tells us to open a view or apply an action, check it and execute it
+            if (m.content.open_view !== undefined && m.content.open_view !== "") {
+                const view = m.content.open_view as string;
+
+                if (!Object.values(GarvisOpenView).includes(view as GarvisOpenView)) {
+                    return; // screw it, we don't have that view action then.
+                }
+                console.log(`Received instructions from Garvis: 
+                    open_view=${m.content.open_view}; 
+                    action=${m.content.action}; 
+                    parameters=${JSON.stringify(m.content.parameters)}`);
+
+                const open_view = view as GarvisOpenView;
+                onGarvisInstruction({
+                    open_view,
+                    parameters: m.content.parameters as any,
+                });
+            }
 
             // Make the new message speak
             if (m.content.audio_base64 && m.content.audio_mime_type) {

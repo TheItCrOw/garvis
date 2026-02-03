@@ -1,4 +1,4 @@
-from app.core.garvis_task import GarvisTask
+from app.core.garvis_task import GarvisReply, GarvisTask
 from app.database.duckdb_data_service import DataService
 from app.services.agentic_assistant_service import AgenticAssistantService
 
@@ -21,7 +21,7 @@ class Garvis:
     def __init__(self, agent: AgenticAssistantService):
         self.agent = agent
 
-    async def handle_task(self, task: GarvisTask):
+    async def handle_task(self, task: GarvisTask) -> GarvisReply:
         """
         Receives a task that models a user input alongside a distinct session_id.
         Processes this task through Garvis.

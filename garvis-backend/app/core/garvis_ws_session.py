@@ -24,7 +24,7 @@ from google.cloud import speech
 from uuid import uuid4
 
 from app.core.garvis import get_garvis
-from app.core.garvis_task import GarvisTask
+from app.core.garvis_task import GarvisReply, GarvisTask
 from app.utils.date_utils import get_day_info
 from app.utils.string_utils import normalize_text
 
@@ -97,16 +97,30 @@ class GarvisWebsocketSession:
         audio_b64, mime = await asyncio.to_thread(
             self.tts_service.synthesize_speech_mp3_b64, message
         )
-        await self.send_garvis_answer("Welcome", message, audio_b64, mime)
+        await self.send_garvis_answer(
+            "Welcome",
+            GarvisReply("", "Say your welcome Garvis!", message),
+            audio_b64,
+            mime,
+        )
 
     async def send_garvis_answer(
         self,
         intent: str,
-        answer: str,
-        audio_base64: Optional[str],
-        audio_mime_type: Optional[str],
+        garvis_reply: GarvisReply,
+        audio_base64: str,
+        audio_mime_type: str,
     ):
-        content = WsGarvisContent(intent, answer, audio_base64, audio_mime_type)
+        content = WsGarvisContent(
+            intent,
+            user_query=garvis_reply.query,
+            answer=garvis_reply.reply,
+            audio_base64=audio_base64,
+            audio_mime_type=audio_mime_type,
+            open_view=garvis_reply.view,
+            action=garvis_reply.action,
+            parameters=garvis_reply.parameters,
+        )
         await self.send(WsMessage.create(WsMessageType.GARVIS, content))
 
     async def _consume_garvis_tasks(self):
@@ -120,13 +134,13 @@ class GarvisWebsocketSession:
                 break
 
             # sequential processing of a task by garvis, one at a time, in order
-            garvis_answer = await self.garvis.handle_task(task)
+            garvis_reply = await self.garvis.handle_task(task)
             audio_b64, mime = await asyncio.to_thread(
                 self.tts_service.synthesize_speech_mp3_b64,
-                garvis_answer,
+                garvis_reply.reply,
             )
             # send back to client
-            await self.send_garvis_answer("Completion", garvis_answer, audio_b64, mime)
+            await self.send_garvis_answer("Completion", garvis_reply, audio_b64, mime)
 
     async def handle_start_recording(self, msg: WsMessage[WsStartRecordingContent]):
         c = msg.content

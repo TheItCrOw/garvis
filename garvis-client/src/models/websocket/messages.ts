@@ -51,10 +51,33 @@ export const createWsStartRecordingContent = (
 
 export interface WsGarvisContent {
     intent: string;
+    user_query?: string;
     answer: string;
     audio_base64?: string;
     audio_mime_type?: string;
+    open_view?: string;
+    action?: string;
+    parameters?: JSON;
 }
+
+export enum GarvisOpenView {
+    Patient = "Patient",
+    PatientHistory = "PatientHistory",
+    Calendar = "Calendar",
+}
+export type GarvisInstruction =
+    | {
+        open_view: GarvisOpenView.Patient;
+        parameters: { patient_id: number };
+    }
+    | {
+        open_view: GarvisOpenView.PatientHistory;
+        parameters: { patient_id: number };
+    }
+    | {
+        open_view: GarvisOpenView.Calendar;
+        parameters?: { date?: string; doctor_id?: number };
+    };
 
 export interface WsStopRecordingContent {
     reason?: string;

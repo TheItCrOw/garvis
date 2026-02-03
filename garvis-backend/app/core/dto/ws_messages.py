@@ -1,6 +1,7 @@
 from __future__ import annotations
 from dataclasses import asdict, dataclass, is_dataclass
 from enum import Enum
+import json
 from typing import Any, Dict, Generic, Optional, Type, TypeVar
 import uuid
 
@@ -83,9 +84,13 @@ class WsStartRecordingContent:
 @dataclass
 class WsGarvisContent:
     intent: str = ""
+    user_query: str = ""
     answer: str = ""
     audio_base64: str = ""
     audio_mime_type: str = ""
+    open_view: str = ""
+    action: str = ""
+    parameters: json = None
 
 
 @dataclass

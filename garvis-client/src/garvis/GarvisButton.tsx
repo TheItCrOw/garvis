@@ -1,10 +1,15 @@
 import { config } from "../config";
 import { useGarvisWsClient } from "./useGarvisWsClient";
 import logo from "./../assets/logo.png";
-import { faStop } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import type { GarvisInstruction } from "../models/websocket/messages";
 
-export default function GarvisButton() {
+type GarvisButtonProps = {
+  onGarvisInstruction: (instruction: GarvisInstruction) => void;
+};
+
+export default function GarvisButton({
+  onGarvisInstruction,
+}: GarvisButtonProps) {
   const {
     startRecording,
     stopRecording,
@@ -17,6 +22,7 @@ export default function GarvisButton() {
     garvisIsThinking,
   } = useGarvisWsClient({
     wsUrl: config.backendWsUrl,
+    onGarvisInstruction: onGarvisInstruction,
   });
 
   return (

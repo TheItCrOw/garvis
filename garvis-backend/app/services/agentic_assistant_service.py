@@ -1,16 +1,19 @@
 import duckdb
 import os
-#import pandas as pd
+
+# import pandas as pd
 import re
 
 from dotenv import load_dotenv
-#from pathlib import Path
+
+# from pathlib import Path
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, START, END
-#from langgraph.graph.message import add_messages
+
+# from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
@@ -25,13 +28,22 @@ from app.core.garvis_task import GarvisTask, GarvisReply
 from threading import Lock
 from app.database.duckdb_data_service import DataService
 
+
 class ClientCommand(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    view: str = Field(..., description="Client screen/view identifier (e.g., 'patient', 'doctor', 'calendar', 'chat','none').")
-    action: str = Field(..., description="Client action identifier (e.g., 'VIEW', 'LIST', 'none').")
-    parameters: Dict[str, Union[str|int]]| None
+    view: str = Field(
+        ...,
+        description="Client screen/view identifier (e.g., 'patient', 'doctor', 'calendar', 'chat','none').",
+    )
+    action: str = Field(
+        ..., description="Client action identifier (e.g., 'VIEW', 'LIST', 'none')."
+    )
+    parameters: Dict[str, Union[str | int]] | None
     intent_confidence: float = Field(0.75, ge=0.0, le=1.0)
-    reasoning_short: str = Field("", description="1 short sentence rationale; no private or sensitive data.")
+    reasoning_short: str = Field(
+        "", description="1 short sentence rationale; no private or sensitive data."
+    )
+
 
 class AgenticAssistantService:
     OLLAMA_MODEL: ClassVar[str] = "MedAIBase/MedGemma1.5:4b"
@@ -83,11 +95,10 @@ class AgenticAssistantService:
         self._load_env()
         self.im_alive = True
         self.llm_openai = ChatOpenAI(
-            model=os.getenv("OPENAI_MODEL")
-            , temperature=0
+            model=os.getenv("OPENAI_MODEL"), temperature=0
         ).bind_tools(self.return_tools())
 
-        if(not self.graph):
+        if not self.graph:
             self.graph = self.build_graph()
 
     def route_to_client_command(self, state: AgentState) -> AgentState:
@@ -108,11 +119,11 @@ class AgenticAssistantService:
             - if the intent is something like "Open the patient file of patient 1" or "open calendar on Jan 23, 2026" then choose "View"
             - if the intent is something like "List me the patients" or "I want to see all the doctors" then choose "List"
         - If unsure, default to view="None", action="None", parameters={"mode":"chat"}.
-        """        
-        
+        """
+
         # You can pass full history, or truncate to last N messages for cost control
-        #messages = state.get("messages", [])
-        #last_messages = messages[-4:]  # <-- only last 4
+        # messages = state.get("messages", [])
+        # last_messages = messages[-4:]  # <-- only last 4
         last_messages = state.get("messages", [])
 
         router = self.llm_openai.with_structured_output(ClientCommand)
@@ -128,8 +139,7 @@ class AgenticAssistantService:
 
         # Return only the state updates you want to apply
         return state
-    
-    
+
     ##################
     # i know, i know, the code looks ugly for now, but the goal is to make it work, then let's refactor later XD
 
@@ -214,7 +224,7 @@ class AgenticAssistantService:
         return resp.content
 
     def return_tools(self):
-        tools_collection =  [
+        tools_collection = [
             self.get_schema,
             self.run_sql,
             self.medgemma_reasoner,
@@ -250,13 +260,16 @@ class AgenticAssistantService:
         builder.add_node("tools", ToolNode(self.return_tools()))
         builder.add_edge(START, "assistant")
         builder.add_conditional_edges(
-            "assistant", self.should_continue, {"tools": "tools", "route_to_client_command": "route_to_client_command"}
+            "assistant",
+            self.should_continue,
+            {"tools": "tools", "route_to_client_command": "route_to_client_command"},
         )
         builder.add_edge("tools", "assistant")
-        builder.add_node("route_to_client_command",self.route_to_client_command)
+        builder.add_node("route_to_client_command", self.route_to_client_command)
         builder.add_edge("route_to_client_command", END)
 
-        return builder.compile(checkpointer=checkpointer)   
+        return builder.compile(checkpointer=checkpointer)
+
     ###############################################################################################################################################
 
     def _chat(
@@ -264,7 +277,8 @@ class AgenticAssistantService:
     ) -> str:
         cfg = {"configurable": {"thread_id": thread_id}}
         final_state = self.graph.invoke(
-            {"messages": [HumanMessage(content=user_text)],"parameters":{"id":"id"}}, config=cfg
+            {"messages": [HumanMessage(content=user_text)], "parameters": {"id": "id"}},
+            config=cfg,
         )
 
         if display_tool_call:
@@ -277,10 +291,12 @@ class AgenticAssistantService:
                         )
 
         # The latest assistant message is at the end
-        return final_state["messages"][-1].content \
-                , final_state['view'] \
-                , final_state['action'] \
-                , final_state['parameters']
+        return (
+            final_state["messages"][-1].content,
+            final_state["view"],
+            final_state["action"],
+            final_state["parameters"],
+        )
 
     def call_agent(self, garvis_task: GarvisTask):
         content, view, action, parameters = self._chat(
@@ -289,9 +305,6 @@ class AgenticAssistantService:
             display_tool_call=True,
         )
         print(content, view, action, parameters)
-        return GarvisReply(garvis_task.session_id
-                           , garvis_task.query
-                           , content
-                           , view
-                           , action
-                           , parameters)
+        return GarvisReply(
+            garvis_task.session_id, garvis_task.query, content, view, action, parameters
+        )
