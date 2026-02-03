@@ -45,11 +45,11 @@ class AgenticAssistantService:
         self._llm_flavor = os.getenv("LLM_FLAVOR")
         print(self._llm_flavor)
         if(os.getenv("LLM_FLAVOR") == "GOOGLE"):
-            self._orchestrating_llm_with_tools =  ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL"),temperature=0,timeout=60,max_retries=2).bind_tools(self.return_tools())
-            self._llm_with_no_tools = ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL"),temperature=0,timeout=60,max_retries=2)
+            self._orchestrating_llm_with_tools =  ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL"),temperature=0,timeout=120,max_retries=2).bind_tools(self.return_tools())
+            self._llm_with_no_tools = ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL"),temperature=0,timeout=120,max_retries=2)
         else:
-            self._orchestrating_llm_with_tools = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0).bind_tools(self.return_tools())
-            self._llm_with_no_tools = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0)
+            self._orchestrating_llm_with_tools = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0,timeout=120).bind_tools(self.return_tools())
+            self._llm_with_no_tools = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0,timeout=120)
 
     def __init__(self):
         self.llm_ollama = AgenticAssistantService.get_ollama()
@@ -117,14 +117,14 @@ class AgenticAssistantService:
         response = self._orchestrating_llm_with_tools.invoke(
             [SystemMessage(content=agent_constants.SYSTEM_PROMPT)] + state["messages"]
         )
-
+        print(response)
         state["messages"] = state["messages"] + [response]
         return state
 
     def _should_continue(self, state: AgentState) -> str:
         state_messages = state["messages"]  # copies the latest state into the "messages" variable
         last_message = state_messages[-1]  # get only the last message
-
+ 
         if not last_message.tool_calls:
             return "route_to_client_command"
         else:
