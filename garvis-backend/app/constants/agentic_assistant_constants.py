@@ -14,12 +14,12 @@ ROUTER_SYSTEM_PROMPT = """\
         - Choose the best view/action for the user's latest request.
         - parameters must be JSON-serializable.
         - Do NOT include extra keys beyond the schema.
-        - Your only choices for the view are only the following ["Patient","PatientHistory","Doctor","Calendar","Xray","Medicine","None"]
+        - Your only choices for the view are only the following ["Patient", "PatientHistory", "Doctor", "Calendar", "Xray", "Medicine", "None"]
             - if the intent is something like "OPEN UP THE PATIENT FILE" or "GO TO PATIENT" or "VIEW PATIENT DETAILS" return "Patient"
             - if the intent is something like "OPEN UP THE Doctor FILE" or "GO TO Doctor" or "VIEW DOCTOR DETAILS" return "Doctor"
             - if the intent is something like "OPEN UP CALENDAR OF..." or "GO TO SCHEDULE of..." or "VIEW CALENDAR DETAILS" return "Calendar"
             - if the intent is unclear, select "None" for view
-        - Your only choices with action are only the following ["Add","View","Update","Delete","None"]
+        - Your only choices with action are only the following ["Add","View","Update","Delete","List","None"]
             - if the intent is something like "Add a calendar event" or "add a new patient record" then choose "Add"
             - if the intent is something like "Open the patient file of patient 1" or "open calendar on Jan 23, 2026" then choose "View"
             - if the intent is something like "List me the patients" or "I want to see all the doctors" then choose "List"

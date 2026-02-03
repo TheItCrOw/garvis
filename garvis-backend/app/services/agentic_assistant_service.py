@@ -1,22 +1,22 @@
 import app.constants.agentic_assistant_constants as agent_constants
+import app.schemas.client_command as client_command
 import app.utils.agent_utils as agent_utils
 import os
 
 from app.core.dto.agent_state import AgentState
 from app.core.dto.garvis_dtos import GarvisReply, GarvisTask
 from app.database.duckdb_data_service import DataService
-from app.schemas.client_command import ClientCommand
 
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import tool
-
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
+
 from threading import Lock
 from typing import ClassVar, Optional
 
@@ -41,9 +41,6 @@ class AgenticAssistantService:
     def initialize(cls, data_service: DataService):
         cls._data_service = data_service
 
-    def _get_tool_method_call(self):
-        return "function_calling" if self._llm_flavor == "GOOGLE" else "json_schema"     
-    
     def _initialize_orchestrating_llms(self):
         self._llm_flavor = os.getenv("LLM_FLAVOR")
         if(self._llm_flavor == "GOOGLE"):
@@ -62,6 +59,9 @@ class AgenticAssistantService:
         if(not self._graph):
             self._graph = self._build_graph()
  
+    def _get_tool_method_call(self):
+        return "function_calling" if self._llm_flavor == "GOOGLE" else "json_schema" 
+
     @tool
     def get_schema() -> str:
         """Return the DuckDB schema information (tables and columns) in a compact format."""
@@ -138,17 +138,18 @@ class AgenticAssistantService:
         #last_messages = messages[-last_n_messages:]  # <-- only last 4
         
         last_messages = state.get("messages", [])
-        router = self._llm_with_no_tools.with_structured_output(ClientCommand, method= self._get_tool_method_call())
+
+        router = self._llm_with_no_tools.with_structured_output(client_command.CLIENT_COMMAND_RAW_SCHEMA, method= self._get_tool_method_call())
 
         reply = router.invoke(
             [{"role": "system", "content": agent_constants.ROUTER_SYSTEM_PROMPT}, *last_messages]
         )
 
-        state["view"] = reply.view
-        state["action"] = reply.action
-        state["parameters"] = reply.parameters
-        state["intent_confidence"] = reply.intent_confidence
-        state["reasoning_short"] = reply.reasoning_short
+        state["view"] = reply["view"]
+        state["action"] = reply["action"]
+        state["parameters"] = reply["parameters"]
+        state["intent_confidence"] = reply["intent_confidence"]
+        state["reasoning_short"] = reply["reasoning_short"]
 
         # Return only the state updates you want to apply 
         return state
