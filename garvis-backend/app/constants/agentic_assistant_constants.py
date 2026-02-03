@@ -1,5 +1,7 @@
 DISALLOWED_SQL = "\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|ATTACH|DETACH|COPY|EXPORT|IMPORT|PRAGMA)\b"
 
+MEDGEMMA_MODEL_NAME = "MedAIBase/MedGemma1.5:4b"
+
 MEDGEMMA_SYSEM_PROMPT = """You are an amazing AI-assistant named Garvis that specializes in medical and health-related inquiries.
                         For every inquiry I give you, answer to the best of your capabilities, and always cite your sources 
                         and state how confident are you from LOW, MEDIUM, and HIGH!

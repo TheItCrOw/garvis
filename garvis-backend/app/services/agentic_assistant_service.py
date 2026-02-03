@@ -7,7 +7,6 @@ from app.core.dto.garvis_dtos import GarvisReply, GarvisTask
 from app.database.duckdb_data_service import DataService
 from app.schemas.client_command import ClientCommand
 
-from dotenv import load_dotenv
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -15,26 +14,25 @@ from langchain_core.tools import tool
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
+#from langchain_google_genai import ChatGoogleGenerativeAI #will try soon
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from threading import Lock
 from typing import ClassVar, Optional
 
 class AgenticAssistantService:
-    OLLAMA_MODEL: ClassVar[str] = "MedAIBase/MedGemma1.5:4b"
     _ollama_lock: ClassVar[Lock] = Lock()
     _ollama_client: ClassVar[Optional[ChatOllama]] = None
     _data_service: DataService = None
 
     @classmethod
     def get_ollama(cls) -> ChatOllama:
-        # Double-checked locking
         if cls._ollama_client is None:
             with cls._ollama_lock:
                 if cls._ollama_client is None:
                     print("instantiating ollama!")
                     cls._ollama_client = ChatOllama(
-                        model=cls.OLLAMA_MODEL,
+                        model=agent_constants.MEDGEMMA_MODEL_NAME,
                         temperature=0,
                     )
         return cls._ollama_client
@@ -43,20 +41,16 @@ class AgenticAssistantService:
     def initialize(cls, data_service: DataService):
         cls._data_service = data_service
 
-    def _load_env(self):
-        load_dotenv()
-
     def __init__(self):
         self.llm_ollama = AgenticAssistantService.get_ollama()
-        self.llm_openai = None
-        self.graph = None
+        self._graph = None
 
-        self._load_env()
         self.im_alive = True
-        self.llm_openai = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0).bind_tools(self.return_tools())
+        self.llm_openai_with_tools = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0).bind_tools(self.return_tools())
+        self.llm_openai_vanilla = ChatOpenAI(model=os.getenv("OPENAI_MODEL"), temperature=0)
 
-        if(not self.graph):
-            self.graph = self.build_graph()
+        if(not self._graph):
+            self._graph = self._build_graph()
  
     @tool
     def get_schema() -> str:
@@ -85,7 +79,7 @@ class AgenticAssistantService:
     def medgemma_reasoner(task: str) -> str:
         """
         Use the Med Gemma model for medical-related inquiries, like asking what disease or ailment shows certain symptoms.
-        Or in cases where for certain situations, what is the first aid
+        Or in cases where for certain situations, what is the first aid or certain diseases. 
         """
 
         resp = AgenticAssistantService.get_ollama().invoke(
@@ -110,17 +104,15 @@ class AgenticAssistantService:
 
         return tools_collection
 
-    def assistant_node(self, state: AgentState) -> AgentState:
-        response = self.llm_openai.invoke(
+    def _assistant_node(self, state: AgentState) -> AgentState:
+        response = self.llm_openai_with_tools.invoke(
             [SystemMessage(content=agent_constants.SYSTEM_PROMPT)] + state["messages"]
         )
         state["messages"] = state["messages"] + [response]
         return state
 
-    def should_continue(self, state: AgentState) -> str:
-        state_messages = state[
-            "messages"
-        ]  # copies the latest state into the "messages" variable
+    def _should_continue(self, state: AgentState) -> str:
+        state_messages = state["messages"]  # copies the latest state into the "messages" variable
         last_message = state_messages[-1]  # get only the last message
 
         if not last_message.tool_calls:
@@ -128,13 +120,15 @@ class AgenticAssistantService:
         else:
             return "tools"
 
-    def route_to_client_command(self, state: AgentState) -> AgentState:
+    def _route_to_client_command(self, state: AgentState) -> AgentState:
         # You can pass full history, or truncate to last N messages for cost control
         #messages = state.get("messages", [])
-        #last_messages = messages[-4:]  # <-- only last 4
+        #last_n_messages = len(messages) if len(messages) < 4 else 4
+        #last_messages = messages[-last_n_messages:]  # <-- only last 4
+        
         last_messages = state.get("messages", [])
 
-        router = self.llm_openai.with_structured_output(ClientCommand)
+        router = self.llm_openai_vanilla.with_structured_output(ClientCommand)
         reply = router.invoke(
             [{"role": "system", "content": agent_constants.ROUTER_SYSTEM_PROMPT}, *last_messages]
         )
@@ -149,17 +143,17 @@ class AgenticAssistantService:
         # Return only the state updates you want to apply
         return state
 
-    def build_graph(self):
+    def _build_graph(self):
         checkpointer = InMemorySaver()
         builder = StateGraph(AgentState)
-        builder.add_node("assistant", self.assistant_node)
+        builder.add_node("assistant", self._assistant_node)
         builder.add_node("tools", ToolNode(self.return_tools()))
         builder.add_edge(START, "assistant")
         builder.add_conditional_edges(
-            "assistant", self.should_continue, {"tools": "tools", "route_to_client_command": "route_to_client_command"}
+            "assistant", self._should_continue, {"tools": "tools", "route_to_client_command": "route_to_client_command"}
         )
         builder.add_edge("tools", "assistant")
-        builder.add_node("route_to_client_command",self.route_to_client_command)
+        builder.add_node("route_to_client_command",self._route_to_client_command)
         builder.add_edge("route_to_client_command", END)
 
         return builder.compile(checkpointer=checkpointer)   
@@ -168,7 +162,7 @@ class AgenticAssistantService:
         self, user_text: str, thread_id: str = "demo", display_tool_call: bool = True
     ) -> str:
         cfg = {"configurable": {"thread_id": thread_id}}
-        final_state = self.graph.invoke(
+        final_state = self._graph.invoke(
             {"messages": [HumanMessage(content=user_text)],"parameters":{"id":"id"}}, config=cfg
         )
 
@@ -188,13 +182,14 @@ class AgenticAssistantService:
                 , final_state['parameters'] \
                 , final_state['intent_confidence']
 
-    def call_agent(self, garvis_task: GarvisTask):
+    def call_agent(self, garvis_task: GarvisTask)->GarvisReply:
+
         content, view, action, parameters, intent_confidence = self._chat(
             user_text=garvis_task.query,
             thread_id=garvis_task.session_id,
             display_tool_call=False,
         )
-        print(content, view, action, parameters)
+
         return GarvisReply(garvis_task.session_id
                            , garvis_task.query
                            , content
