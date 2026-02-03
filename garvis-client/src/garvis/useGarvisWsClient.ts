@@ -52,20 +52,18 @@ export function useGarvisWsClient({ wsUrl, onGarvisInstruction }: UseGarvisWsCli
             // If Garvis tells us to open a view or apply an action, check it and execute it
             if (m.content.open_view !== undefined && m.content.open_view !== "") {
                 const view = m.content.open_view as string;
-
-                if (!Object.values(GarvisOpenView).includes(view as GarvisOpenView)) {
-                    return; // screw it, we don't have that view action then.
-                }
-                console.log(`Received instructions from Garvis: 
+                if (Object.values(GarvisOpenView).includes(view as GarvisOpenView)) {
+                    console.log(`Received instructions from Garvis: 
                     open_view=${m.content.open_view}; 
                     action=${m.content.action}; 
                     parameters=${JSON.stringify(m.content.parameters)}`);
 
-                const open_view = view as GarvisOpenView;
-                onGarvisInstruction({
-                    open_view,
-                    parameters: m.content.parameters as any,
-                });
+                    const open_view = view as GarvisOpenView;
+                    onGarvisInstruction({
+                        open_view,
+                        parameters: m.content.parameters as any,
+                    });
+                }
             }
 
             // Make the new message speak
@@ -136,7 +134,6 @@ export function useGarvisWsClient({ wsUrl, onGarvisInstruction }: UseGarvisWsCli
         return () => {
             cancelled = true;
         };
-        // Intentionally run once:
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

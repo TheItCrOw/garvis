@@ -34,8 +34,8 @@ async def ws_audio(websocket: WebSocket):
                 break
 
             msg = await websocket.receive()
-
             if msg.get("text") is not None:
+                print("[=> INCOMING] New Text Message")
                 try:
                     raw = json.loads(msg["text"])
                 except json.JSONDecodeError:
@@ -50,11 +50,13 @@ async def ws_audio(websocket: WebSocket):
                     continue
 
                 if message_type == WsMessageType.START_RECORDING:
+                    print("[=> INCOMING] Starting to record and transcribe.")
                     parsed = WsMessage.from_json(
                         raw, content_cls=WsStartRecordingContent
                     )
                     await session.handle_start_recording(parsed)
                 elif message_type == WsMessageType.STOP_RECORDING:
+                    print("[=> INCOMING] Stopping to record.")
                     parsed = WsMessage.from_json(
                         raw, content_cls=WsStopRecordingContent
                     )
@@ -70,6 +72,7 @@ async def ws_audio(websocket: WebSocket):
                 await session.send_error("Unsupported message")
 
     except WebSocketDisconnect:
+        print("Disconnecting websocket.")
         # client vanished: stop worker
         try:
             session.transcription_queue.async_q.put_nowait(None)

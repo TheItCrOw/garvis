@@ -68,78 +68,9 @@ class DataService:
         with self.connection() as con:
             return con.execute("SELECT COUNT(*) FROM patient").fetchone()[0]
 
-    def export_tools(self):
-        @tool
-        def doctor_by_id(doctor_id: int) -> Optional["Doctor"]:
-            """Query the duckduckdb for the available doctors using doctor_id as the parameter.
-            Only query this table when explicitly instructed."""
-            return self.get_doctor_by_id(doctor_id)
-
-        @tool
-        def doctor_by_full_name(doctor_id: int) -> Optional["Doctor"]:
-            """Query the duckduckdb for the available doctors using doctor_id as the parameter.
-            Only query this table when explicitly instructed."""
-            return self.get_doctor_by_full_name(doctor_id)
-
-        @tool
-        def patient_by_id(patient_id: int) -> Optional["Patient"]:
-            """Query the duckduckdb for the patient information using patient_id as the parameter.
-            Only query this table when explicitly instructed."""
-            return self.get_patient_by_id(patient_id)
-
-        @tool
-        def patient_by_full_name(
-            first_name: str, last_name: str
-        ) -> Optional["Patient"]:
-            """Query the duckduckdb for the patients using first name and last name as the parameters.
-            Only query this table when explicitly instructed."""
-            return self.get_patient_by_full_name(first_name, last_name)
-
-        @tool
-        def doctor_calendar_for_day(
-            doctor_id: int, day: Optional[date] = None
-        ) -> List["CalendarEntry"]:
-            """Query the duckduckdb for the calendar and scheduled activities of a doctor using doctor_id and with an optional date parameters.
-             Full calendar (all entries) for a doctor on a given day.
-             Default day: today in Europe/Berlin.
-            Only query this table when explicitly instructed."""
-            return self.get_doctor_calendar_for_day(doctor_id, day)
-
-        @tool
-        def patient_history(patient_id: int) -> List["PatientHistory"]:
-            """Query the duckduckdb for a specific patient's history using the patient_id as parameter.
-            Only query this table when explicitly instructed."""
-            return self.get_patient_history(patient_id)
-
-        @tool
-        def patient_history_with_doctor(
-            patient_id: int, doctor_id: int
-        ) -> List["PatientHistory"]:
-            """Query the duckduckdb for a specific patient's history with a doctor using the patient_id and doctor_id as parameters.
-            Only query this table when explicitly instructed."""
-            return self.get_patient_history_with_doctor(patient_id, doctor_id)
-
-        @tool
-        def patient_with_full_history(patient_id: int) -> Optional[Dict[str, Any]]:
-            """Query the duckduckdb for a specific patient's history using the patient_id.
-            Only query this table when explicitly instructed."""
-            return self.get_patient_with_full_history(patient_id)
-
-        # return the tools
-        return [
-            doctor_by_id,
-            doctor_by_full_name,
-            patient_by_id,
-            patient_by_full_name,
-            doctor_calendar_for_day,
-            patient_history,
-            patient_history_with_doctor,
-            patient_with_full_history,
-        ]
-
     # ========= Specific Task methods =========
     def get_doctor_by_id(self, doctor_id: int) -> Optional["Doctor"]:
-        """Query the duckduckdb for the available doctors using doctor_id as the parameter"""
+        """Query the DuckDB for the available doctors using doctor_id as the parameter"""
         with self.connection() as con:
             row = self._fetchone_dict(
                 con,
@@ -155,7 +86,7 @@ class DataService:
     def get_doctor_by_full_name(
         self, first_name: str, last_name: str
     ) -> Optional["Doctor"]:
-        """Query the duckduckdb for the available doctors using either first name or last name as the parameter"""
+        """Query the DuckDB for the available doctors using either first name or last name as the parameter"""
         with self.connection() as con:
             row = self._fetchone_dict(
                 con,
@@ -169,7 +100,7 @@ class DataService:
             return Doctor.from_row(row) if row else None
 
     def get_patient_by_id(self, patient_id: int) -> Optional["Patient"]:
-        """Query the duckduckdb for the patient information using patient_id as the identifier"""
+        """Query the DuckDB for the patient information using patient_id as the identifier"""
         with self.connection() as con:
             row = self._fetchone_dict(
                 con,
@@ -185,7 +116,7 @@ class DataService:
     def get_patient_by_full_name(
         self, first_name: str, last_name: str
     ) -> Optional["Patient"]:
-        """Query the duckduckdb for the patients using either first name or last name as the parameter"""
+        """Query the DuckDB for the patients using either first name or last name as the parameter"""
         with self.connection() as con:
             row = self._fetchone_dict(
                 con,
@@ -499,3 +430,228 @@ class DataService:
         with self.connection() as con:
             row = self._fetchone_dict(con, sql, tuple(params))
             return Patient.from_row(row) if row else None
+
+    # TOOOOOOO...OOOOOOOOLS
+
+    def return_tools(self):
+        @tool
+        def doctor_by_id(doctor_id: int) -> Optional["Doctor"]:
+            """Query the DuckDB for the available doctors using doctor_id as the parameter.
+            Only query this table when explicitly instructed."""
+            return self.get_doctor_by_id(doctor_id)
+
+        @tool
+        def doctor_by_full_name(first_name: str, last_name: str) -> Optional["Doctor"]:
+            """Query the DuckDB for the available doctors using doctor_id as the parameter.
+            Only query this table when explicitly instructed."""
+            return self.get_doctor_by_full_name(first_name, last_name)
+
+        @tool
+        def patient_by_id(patient_id: int) -> Optional["Patient"]:
+            """Query the DuckDB for the patient information using patient_id as the parameter.
+            Only query this table when explicitly instructed."""
+            return self.get_patient_by_id(patient_id)
+
+        @tool
+        def patient_by_full_name(
+            first_name: str, last_name: str
+        ) -> Optional["Patient"]:
+            """Query the DuckDB for the patients using first name and last name as the parameters.
+            Only query this table when explicitly instructed."""
+            return self.get_patient_by_full_name(first_name, last_name)
+
+        @tool
+        def doctor_calendar_for_day(
+            doctor_id: int, day: Optional[date] = None
+        ) -> List["CalendarEntry"]:
+            """Query the DuckDB for the calendar and scheduled activities of a doctor using doctor_id and with an optional date parameters.
+             Full calendar (all entries) for a doctor on a given day.
+             Default day: today in Europe/Berlin.
+            Only query this table when explicitly instructed."""
+            return self.get_doctor_calendar_for_day(doctor_id, day)
+
+        @tool
+        def patient_history(patient_id: int) -> List["PatientHistory"]:
+            """Query the DuckDB for a specific patient's history using the patient_id as parameter.
+            Only query this table when explicitly instructed."""
+            return self.get_patient_history(patient_id)
+
+        @tool
+        def patient_history_with_doctor(
+            patient_id: int, doctor_id: int
+        ) -> List["PatientHistory"]:
+            """Query the DuckDB for a specific patient's history with a doctor using the patient_id and doctor_id as parameters.
+            Only query this table when explicitly instructed."""
+            return self.get_patient_history_with_doctor(patient_id, doctor_id)
+
+        @tool
+        def patient_with_full_history(patient_id: int) -> Optional[Dict[str, Any]]:
+            """Query the DuckDB for a specific patient's history using the patient_id.
+            Only query this table when explicitly instructed."""
+            return self.get_patient_with_full_history(patient_id)
+
+        @tool
+        def tool_add_calendar_entry(
+            doctor_id: int,
+            patient_id: int,
+            start_at: datetime,
+            end_at: datetime,
+            entry_type: Literal[
+                "consultation",
+                "emergency",
+                "surgery",
+                "prescription",
+                "follow_up",
+                "hospitalization",
+                "referral",
+            ],
+            title: str,
+            location: Optional[
+                Literal[
+                    "Clinic Room 1",
+                    "Clinic Room 2",
+                    "Clinic Room 3",
+                    "Radiology",
+                    "OR 1",
+                    "OR 2",
+                    "Online",
+                    "Conference Room",
+                ]
+            ] = None,
+            priority: str = "normal",
+            status: str = "scheduled",
+            notes: Optional[str] = None,
+        ) -> "CalendarEntry":
+            """
+            Add a calendar entry for a doctor with a patient.
+            Ensure that the required fields have values and confirm them from the user before adding.
+            Returns the created CalendarEntry row. Only invoke this tool if the intent is clear
+            """
+
+            return self.add_calendar_entry(
+                doctor_id=doctor_id,
+                patient_id=patient_id,
+                start_at=start_at,
+                end_at=end_at,
+                entry_type=entry_type,
+                title=title,
+                location=location,
+                priority=priority,
+                status=status,
+                notes=notes,
+            )
+
+        @tool
+        def tool_add_patient_history(
+            patient_id: int,
+            doctor_id: int,
+            event_type: str,
+            event_start_at: datetime,
+            event_end_at: Optional[datetime] = None,
+            chief_complaint: Optional[str] = None,
+            diagnosis_summary: Optional[str] = None,
+            procedure_performed: Optional[str] = None,
+            prescription_given: Optional[str] = None,
+            notes: Optional[str] = None,
+            outcome: Optional[str] = None,
+            follow_up_required: Optional[bool] = None,
+            severity: Optional[str] = None,
+            created_at: Optional[datetime] = None,
+        ) -> "PatientHistory":
+            """
+            Add a new patient history event.
+            Ensure that the required fields have values and confirm them from the user before adding.
+            Returns the created PatientHistory row. Only invoke this tool if the intent is clear
+            """
+            return self.add_patient_history(
+                patient_id=patient_id,
+                doctor_id=doctor_id,
+                event_type=event_type,
+                event_start_at=event_start_at,
+                event_end_at=event_end_at,
+                chief_complaint=chief_complaint,
+                diagnosis_summary=diagnosis_summary,
+                procedure_performed=procedure_performed,
+                prescription_given=prescription_given,
+                notes=notes,
+                outcome=outcome,
+                follow_up_required=follow_up_required,
+                severity=severity,
+                created_at=created_at,
+            )
+
+        @tool
+        def tool_update_patient_address(
+            patient_id: int,
+            address_line1: Optional[str] = None,
+            address_line2: Optional[str] = None,
+            city: Optional[str] = None,
+            state: Optional[str] = None,
+            postal_code: Optional[str] = None,
+            country: Optional[str] = None,
+        ) -> Optional["Patient"]:
+            """
+            Update patient address fields. Only updates the fields you pass (non-None).
+            Also updates updated_at to now.
+            Returns the updated Patient or None if patient_id not found.
+            """
+
+            self.update_patient_address(
+                patient_id=patient_id,
+                address_line1=address_line1,
+                address_line2=address_line2,
+                city=city,
+                state=state,
+                postal_code=postal_code,
+                country=country,
+            )
+
+        @tool
+        def tool_prescribe_medication(
+            patient_id: int,
+            doctor_id: int,
+            medication: str,
+            event_start_at: Optional[datetime] = None,
+            event_end_at: Optional[datetime] = None,
+            diagnosis_summary: Optional[str] = None,
+            chief_complaint: Optional[str] = None,
+            notes: Optional[str] = None,
+            severity: Optional[str] = None,
+            follow_up_required: Optional[bool] = True,
+            outcome: Optional[str] = None,
+        ) -> "PatientHistory":
+            """
+            Prescribe a medication to a patient.
+            This is modeled as creating a patient_history entry
+            with prescription_given filled.
+            """
+
+            return self.prescribe_medication(
+                patient_id=patient_id,
+                doctor_id=doctor_id,
+                medication=medication,
+                event_start_at=event_start_at,
+                event_end_at=event_end_at,
+                diagnosis_summary=diagnosis_summary,
+                chief_complaint=chief_complaint,
+                notes=notes,
+                severity=severity,
+                follow_up_required=follow_up_required,
+                outcome=outcome,
+            )
+
+        # return the tools
+        return [
+            doctor_by_id,
+            doctor_by_full_name,
+            patient_by_id,
+            patient_by_full_name,
+            doctor_calendar_for_day,
+            patient_history,
+            patient_history_with_doctor,
+            patient_with_full_history,
+            tool_add_calendar_entry,
+            tool_add_patient_history,
+            tool_update_patient_address,
+            tool_prescribe_medication,
+        ]

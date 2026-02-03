@@ -1,7 +1,6 @@
 import asyncio
 from datetime import datetime
 import json
-from pathlib import Path
 from typing import Optional
 
 from fastapi import WebSocket
@@ -24,7 +23,7 @@ from google.cloud import speech
 from uuid import uuid4
 
 from app.core.garvis import get_garvis
-from app.core.garvis_task import GarvisReply, GarvisTask
+from app.core.dto.garvis_dtos import GarvisTask, GarvisReply
 from app.utils.date_utils import get_day_info
 from app.utils.string_utils import normalize_text
 
@@ -120,6 +119,7 @@ class GarvisWebsocketSession:
             open_view=garvis_reply.view,
             action=garvis_reply.action,
             parameters=garvis_reply.parameters,
+            intent_confidence=garvis_reply.intent_confidence,
         )
         await self.send(WsMessage.create(WsMessageType.GARVIS, content))
 
@@ -209,6 +209,8 @@ class GarvisWebsocketSession:
                         continue
                     text = result.alternatives[0].transcript
                     is_final = result.is_final
+                    if is_final:
+                        text = normalize_text(text)
 
                     asyncio.run_coroutine_threadsafe(
                         self.send(
@@ -222,7 +224,6 @@ class GarvisWebsocketSession:
 
                     if is_final:
                         if text is not None and len(text) > 2:
-                            text = normalize_text(text)
                             self.final_transcript_parts.append(text)
                             self.garvis_task_queue.sync_q.put(
                                 GarvisTask(self.session_id, text)

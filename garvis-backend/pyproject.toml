@@ -34,7 +34,8 @@ dependencies = [
   "langchain-google-genai",
   "ddgs",  
   "duckduckgo-search",
-  "tabulate"
+  "tabulate",
+  "pytz"
 ]
 
 [project.optional-dependencies]

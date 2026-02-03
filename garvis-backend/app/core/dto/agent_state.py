@@ -1,6 +1,6 @@
 from langgraph.graph.message import add_messages
 from typing import Annotated, TypedDict, Sequence, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import Field
 from langchain_core.messages import BaseMessage
 
 class AgentState(TypedDict, total=False):

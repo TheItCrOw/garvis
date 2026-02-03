@@ -91,6 +91,7 @@ class WsGarvisContent:
     open_view: str = ""
     action: str = ""
     parameters: json = None
+    intent_confidence: float = None
 
 
 @dataclass

@@ -1,65 +1,39 @@
-import duckdb
+import app.constants.agentic_assistant_constants as agent_constants
+import app.schemas.client_command as client_command
+import app.utils.agent_utils as agent_utils
 import os
 
-# import pandas as pd
-import re
-
-from dotenv import load_dotenv
-
-# from pathlib import Path
-from langgraph.checkpoint.memory import InMemorySaver
-from langchain_community.tools import DuckDuckGoSearchRun
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from langchain_core.tools import tool
-from langgraph.graph import StateGraph, START, END
-
-# from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode
-from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
-from typing import ClassVar, Optional, Dict, Union
-from pydantic import BaseModel, Field, ConfigDict
-
-# from app.services.agentic_assistant_service import AgentState
 from app.core.dto.agent_state import AgentState
-from app.core.garvis_task import GarvisTask, GarvisReply
-
-# import tabulate
-from threading import Lock
+from app.core.dto.garvis_dtos import GarvisReply, GarvisTask
 from app.database.duckdb_data_service import DataService
 
+from langgraph.checkpoint.memory import InMemorySaver
+from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.tools import tool
+from langgraph.graph import StateGraph, START, END
+from langgraph.prebuilt import ToolNode
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 
-class ClientCommand(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    view: str = Field(
-        ...,
-        description="Client screen/view identifier (e.g., 'patient', 'doctor', 'calendar', 'chat','none').",
-    )
-    action: str = Field(
-        ..., description="Client action identifier (e.g., 'VIEW', 'LIST', 'none')."
-    )
-    parameters: Dict[str, Union[str | int]] | None
-    intent_confidence: float = Field(0.75, ge=0.0, le=1.0)
-    reasoning_short: str = Field(
-        "", description="1 short sentence rationale; no private or sensitive data."
-    )
+from threading import Lock
+from typing import ClassVar, Optional
 
 
 class AgenticAssistantService:
-    OLLAMA_MODEL: ClassVar[str] = "MedAIBase/MedGemma1.5:4b"
     _ollama_lock: ClassVar[Lock] = Lock()
     _ollama_client: ClassVar[Optional[ChatOllama]] = None
     _data_service: DataService = None
 
     @classmethod
     def get_ollama(cls) -> ChatOllama:
-        # Double-checked locking
         if cls._ollama_client is None:
             with cls._ollama_lock:
                 if cls._ollama_client is None:
                     print("instantiating ollama!")
                     cls._ollama_client = ChatOllama(
-                        model=cls.OLLAMA_MODEL,
+                        model=agent_constants.MEDGEMMA_MODEL_NAME,
                         temperature=0,
                     )
         return cls._ollama_client
@@ -68,125 +42,53 @@ class AgenticAssistantService:
     def initialize(cls, data_service: DataService):
         cls._data_service = data_service
 
-    def _load_env(self):
-        print(".env loaded!" if load_dotenv() else ".env not existing!")
-        print(os.getenv("OPENAI_MODEL"))
+    def _initialize_orchestrating_llms(self):
+        self._llm_flavor = os.getenv("LLM_FLAVOR")
+        if self._llm_flavor == "GOOGLE":
+            self._orchestrating_llm_with_tools = ChatGoogleGenerativeAI(
+                model=os.getenv("GEMINI_MODEL"),
+                temperature=0,
+                timeout=120,
+                max_retries=2,
+            ).bind_tools(self.return_tools(), strict=True)
+            self._llm_with_no_tools = ChatGoogleGenerativeAI(
+                model=os.getenv("GEMINI_MODEL"),
+                temperature=0,
+                timeout=120,
+                max_retries=2,
+            )
+        else:
+            self._orchestrating_llm_with_tools = ChatOpenAI(
+                model=os.getenv("OPENAI_MODEL"),
+                temperature=0,
+                timeout=120,
+                max_retries=2,
+            ).bind_tools(self.return_tools(), strict=True)
+            self._llm_with_no_tools = ChatOpenAI(
+                model=os.getenv("OPENAI_MODEL"),
+                temperature=0,
+                timeout=120,
+                max_retries=2,
+            )
 
     def __init__(self):
-        print("Instantiating again!")
         self.llm_ollama = AgenticAssistantService.get_ollama()
-        self.llm_openai = None
-        self.graph = None
-
-        self.SYSTEM_PROMPT = """
-        You are a concise conversational data assistant for a DuckDB hospital database that contains sensitive and personal information.
-
-        Rules:
-        - If a user asks a question that requires database data always run the get_schema first to know the correct table names then call the run_sql tool with the SQL query that you will build.
-        - If you are unsure what tables/columns exist, call get_schema first.
-        - Use ONLY the tool results to answer data questions; do not fabricate numbers.
-        - Some of the tools require specific parameters like doctor_id, doctor names, patient names,  patient_id, etc, only execute them if you have the data already within you.
-        - Keep responses brief and conversational, unless instructed to return in specific format or template.
-        - Avoid executing multiple SQL statements in a single invocation and do not end with semi-colon.
-        - Use explicit joins.
-        - Adhere to ANSI-SQL standards.
-        """
-
-        self._load_env()
+        self._graph = None
         self.im_alive = True
-        self.llm_openai = ChatOpenAI(
-            model=os.getenv("OPENAI_MODEL"), temperature=0
-        ).bind_tools(self.return_tools())
+        self._initialize_orchestrating_llms()
 
-        if not self.graph:
-            self.graph = self.build_graph()
+        if not self._graph:
+            self._graph = self._build_graph()
 
-    def route_to_client_command(self, state: AgentState) -> AgentState:
-        ROUTER_SYSTEM_PROMPT = """\
-        You are an intent router for a client application.
-        Given the conversation, output a single JSON object matching the schema.
-        Rules:
-        - Choose the best view/action for the user's latest request.
-        - parameters must be JSON-serializable.
-        - Do NOT include extra keys beyond the schema.
-        - Your only choices for the view are only the following ["Patient","PatientHistory","Doctor","Calendar","Xray","Medicine","None"]
-            - if the intent is something like "OPEN UP THE PATIENT FILE" or "GO TO PATIENT" return "Patient"
-            - if the intent is something like "OPEN UP THE Doctor FILE" or "GO TO Doctor" return "Doctor"
-            - if the intent is something like "OPEN UP CALENDAR OF..." or "GO TO SCHEDULE of..." return "Calendar"
-            - if the intent is unclear, select "None" for view
-        - Your only choices with action are only the following ["Add","View","Update","Delete","None"]
-            - if the intent is something like "Add a calendar event" or "add a new patient record" then choose "Add"
-            - if the intent is something like "Open the patient file of patient 1" or "open calendar on Jan 23, 2026" then choose "View"
-            - if the intent is something like "List me the patients" or "I want to see all the doctors" then choose "List"
-        - If unsure, default to view="None", action="None", parameters={"mode":"chat"}.
-        """
-
-        # You can pass full history, or truncate to last N messages for cost control
-        # messages = state.get("messages", [])
-        # last_messages = messages[-4:]  # <-- only last 4
-        last_messages = state.get("messages", [])
-
-        router = self.llm_openai.with_structured_output(ClientCommand)
-        reply = router.invoke(
-            [{"role": "system", "content": ROUTER_SYSTEM_PROMPT}, *last_messages]
-        )
-
-        state["view"] = reply.view
-        state["action"] = reply.action
-        state["parameters"] = reply.parameters
-        state["intent_confidence"] = reply.intent_confidence
-        state["reasoning_short"] = reply.reasoning_short
-
-        # Return only the state updates you want to apply
-        return state
-
-    ##################
-    # i know, i know, the code looks ugly for now, but the goal is to make it work, then let's refactor later XD
-
-    def _sanitize_sql(sql: str) -> str:
-
-        _SQL_DISALLOWED = re.compile(
-            r"\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|ATTACH|DETACH|COPY|EXPORT|IMPORT|PRAGMA)\b",
-            re.IGNORECASE,
-        )
-
-        sql = (sql or "").strip().strip("`")
-        sql = re.sub(r"^```(sql)?\s*|\s*```$", "", sql, flags=re.IGNORECASE).strip()
-
-        # block multi-statements
-        if ";" in sql:
-            raise ValueError("Only a single SQL statement is allowed (no semicolons).")
-
-        if _SQL_DISALLOWED.search(sql):
-            raise ValueError("Only read-only queries are allowed (SELECT / WITH).")
-
-        if not re.match(r"^(SELECT|WITH)\b", sql, flags=re.IGNORECASE):
-            raise ValueError("Query must start with SELECT or WITH.")
-
-        # keep results manageable
-        if not re.search(r"\bLIMIT\b", sql, flags=re.IGNORECASE):
-            sql = f"{sql}\nLIMIT 200"
-        return sql
-
-    def _schema_markdown(conn: duckdb.DuckDBPyConnection) -> str:
-        tables = [r[0] for r in conn.execute("SHOW TABLES").fetchall()]
-        if not tables:
-            return "(no tables found)"
-        out = []
-        for t in tables:
-            cols = conn.execute(f"DESCRIBE {t}").fetchall()
-            out.append(f"### {t}")
-            for c in cols:
-                out.append(f"- {c[0]}: {c[1]}")
-            out.append("")
-        return "\n".join(out).strip()
+    def _get_tool_method_call(self):
+        return "function_calling" if self._llm_flavor == "GOOGLE" else "json_schema"
 
     @tool
     def get_schema() -> str:
         """Return the DuckDB schema information (tables and columns) in a compact format."""
 
         with AgenticAssistantService._data_service.connection() as con:
-            database_markdown = AgenticAssistantService._schema_markdown(con)
+            database_markdown = agent_utils.schema_markdown(con)
 
         return database_markdown
 
@@ -195,7 +97,7 @@ class AgenticAssistantService:
         """
         Execute a read-only SQL query (SELECT/WITH) against DuckDB and return results as markdown.
         """
-        sql = AgenticAssistantService._sanitize_sql(query)
+        sql = agent_utils.sanitize_sql(query)
 
         with AgenticAssistantService._data_service.connection() as con:
             df = con.execute(sql).df()
@@ -208,19 +110,16 @@ class AgenticAssistantService:
     def medgemma_reasoner(task: str) -> str:
         """
         Use the Med Gemma model for medical-related inquiries, like asking what disease or ailment shows certain symptoms.
-        Or in cases where for certain situations, what is the first aid
+        Or in cases where for certain situations, what is the first aid or certain diseases.
         """
 
         resp = AgenticAssistantService.get_ollama().invoke(
             [
-                SystemMessage(
-                    content="""You are an amazing AI-assistant that specializes in medical and health-related inquiries.
-                        For every inquiry I give you, answer to the best of your capabilities, and always cite your sources 
-                        and state how confident are you from LOW, MEDIUM, and HIGH!"""
-                ),
+                SystemMessage(content=agent_constants.MEDGEMMA_SYSEM_PROMPT),
                 HumanMessage(content=task),
             ]
         )
+
         return resp.content
 
     def return_tools(self):
@@ -231,18 +130,18 @@ class AgenticAssistantService:
             DuckDuckGoSearchRun(),
         ]
 
-        tools_collection.extend(AgenticAssistantService._data_service.export_tools())
+        tools_collection.extend(AgenticAssistantService._data_service.return_tools())
 
         return tools_collection
 
-    def assistant_node(self, state: AgentState) -> AgentState:
-        response = self.llm_openai.invoke(
-            [SystemMessage(content=self.SYSTEM_PROMPT)] + state["messages"]
+    def _assistant_node(self, state: AgentState) -> AgentState:
+        response = self._orchestrating_llm_with_tools.invoke(
+            [SystemMessage(content=agent_constants.SYSTEM_PROMPT)] + state["messages"]
         )
         state["messages"] = state["messages"] + [response]
         return state
 
-    def should_continue(self, state: AgentState) -> str:
+    def _should_continue(self, state: AgentState) -> str:
         state_messages = state[
             "messages"
         ]  # copies the latest state into the "messages" variable
@@ -253,30 +152,57 @@ class AgenticAssistantService:
         else:
             return "tools"
 
-    def build_graph(self):
+    def _route_to_client_command(self, state: AgentState) -> AgentState:
+        # You can pass full history, or truncate to last N messages for cost control
+        # messages = state.get("messages", [])s
+        # last_n_messages = len(messages) if len(messages) < 4 else 4
+        # last_messages = messages[-last_n_messages:]  # <-- only last 4
+
+        last_messages = state.get("messages", [])
+
+        router = self._llm_with_no_tools.with_structured_output(
+            client_command.CLIENT_COMMAND_RAW_SCHEMA,
+            method=self._get_tool_method_call(),
+        )
+
+        reply = router.invoke(
+            [
+                {"role": "system", "content": agent_constants.ROUTER_SYSTEM_PROMPT},
+                *last_messages,
+            ]
+        )
+
+        state["view"] = reply["view"]
+        state["action"] = reply["action"]
+        state["parameters"] = reply["parameters"]
+        state["intent_confidence"] = reply["intent_confidence"]
+        state["reasoning_short"] = reply["reasoning_short"]
+
+        # Return only the state updates you want to apply
+        return state
+
+    def _build_graph(self):
         checkpointer = InMemorySaver()
         builder = StateGraph(AgentState)
-        builder.add_node("assistant", self.assistant_node)
+        builder.add_node("assistant", self._assistant_node)
         builder.add_node("tools", ToolNode(self.return_tools()))
         builder.add_edge(START, "assistant")
         builder.add_conditional_edges(
             "assistant",
-            self.should_continue,
+            self._should_continue,
             {"tools": "tools", "route_to_client_command": "route_to_client_command"},
         )
         builder.add_edge("tools", "assistant")
-        builder.add_node("route_to_client_command", self.route_to_client_command)
+        builder.add_node("route_to_client_command", self._route_to_client_command)
         builder.add_edge("route_to_client_command", END)
 
         return builder.compile(checkpointer=checkpointer)
-
-    ###############################################################################################################################################
 
     def _chat(
         self, user_text: str, thread_id: str = "demo", display_tool_call: bool = True
     ) -> str:
         cfg = {"configurable": {"thread_id": thread_id}}
-        final_state = self.graph.invoke(
+        final_state = self._graph.invoke(
             {"messages": [HumanMessage(content=user_text)], "parameters": {"id": "id"}},
             config=cfg,
         )
@@ -290,21 +216,35 @@ class AgenticAssistantService:
                             f"Tool Call: #{index+1}| Name: {tool_call["name"]}| Args: {tool_call["args"]}"
                         )
 
-        # The latest assistant message is at the end
+        # google llms wrap their messages in a list of dicts with a "text" key
+        content = (
+            final_state["messages"][-1].content[-1]["text"]
+            if self._llm_flavor == "GOOGLE"
+            else final_state["messages"][-1].content
+        )
+
         return (
-            final_state["messages"][-1].content,
+            content,
             final_state["view"],
             final_state["action"],
             final_state["parameters"],
+            final_state["intent_confidence"],
         )
 
-    def call_agent(self, garvis_task: GarvisTask):
-        content, view, action, parameters = self._chat(
+    def call_agent(self, garvis_task: GarvisTask) -> GarvisReply:
+
+        content, view, action, parameters, intent_confidence = self._chat(
             user_text=garvis_task.query,
             thread_id=garvis_task.session_id,
-            display_tool_call=True,
+            display_tool_call=False,
         )
-        print(content, view, action, parameters)
+
         return GarvisReply(
-            garvis_task.session_id, garvis_task.query, content, view, action, parameters
+            garvis_task.session_id,
+            garvis_task.query,
+            content,
+            view,
+            action,
+            parameters,
+            intent_confidence,
         )

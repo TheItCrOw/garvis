@@ -58,6 +58,7 @@ export interface WsGarvisContent {
     open_view?: string;
     action?: string;
     parameters?: JSON;
+    intent_confidence?: number;
 }
 
 export enum GarvisOpenView {

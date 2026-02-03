@@ -3,12 +3,6 @@ import json
 
 
 @dataclass
-class GarvisTask:
-    session_id: str
-    query: str
-
-
-@dataclass
 class GarvisReply:
     session_id: str
     query: str
@@ -16,3 +10,10 @@ class GarvisReply:
     view: str = ""
     action: str = ""
     parameters: json = None
+    intent_confidence: float = None
+
+
+@dataclass
+class GarvisTask:
+    session_id: str
+    query: str
