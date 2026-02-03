@@ -42,7 +42,7 @@ class AgenticAssistantService:
         cls._data_service = data_service
 
     def _get_tool_method_call(self):
-        return "function_calling" if self._llm_flavor() == "GOOGLE" else "json_schema"     
+        return "function_calling" if self._llm_flavor == "GOOGLE" else "json_schema"     
     
     def _initialize_orchestrating_llms(self):
         self._llm_flavor = os.getenv("LLM_FLAVOR")
