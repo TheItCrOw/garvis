@@ -1,16 +1,20 @@
 from app.core.dto.garvis_dtos import GarvisReply, GarvisTask
-from app.database.duckdb_data_service import DataService
+from app.database.duckdb_data_service import data_service
 from app.services.agentic_assistant_service import AgenticAssistantService
+
+_garvis: "Garvis | None" = None
 
 
 def get_garvis() -> "Garvis":
-    ds = DataService()
-    AgenticAssistantService.initialize(ds)
+    global _garvis
 
-    agent = AgenticAssistantService()
-    garvis = Garvis(agent)
+    if _garvis is None:
+        AgenticAssistantService.initialize(data_service)
 
-    return garvis
+        agent = AgenticAssistantService()
+        _garvis = Garvis(agent)
+
+    return _garvis
 
 
 class Garvis:

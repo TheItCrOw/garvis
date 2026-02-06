@@ -129,5 +129,6 @@ class PatientHistory(JsonDataclassMixin):
     outcome: Optional[str]
     follow_up_required: Optional[bool]
     severity: Optional[str]
+    xray_img_id: Optional[int]
 
     created_at: Optional[datetime]

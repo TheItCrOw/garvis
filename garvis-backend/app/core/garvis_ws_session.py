@@ -18,7 +18,7 @@ from app.core.dto.ws_messages import (
     WsTranscriptContent,
 )
 from app.services.text_to_speech_service import TextToSpeechService
-from app.database.duckdb_data_service import DataService
+from app.database.duckdb_data_service import data_service
 from google.cloud import speech
 from uuid import uuid4
 
@@ -37,7 +37,7 @@ class GarvisWebsocketSession:
     ):
         self.ws = websocket
         self.loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
-        self.ds = DataService()
+        self.ds = data_service
         self.garvis = get_garvis()
 
         self.transcription_queue: janus.Queue[Optional[bytes]] = janus.Queue()

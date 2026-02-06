@@ -140,6 +140,7 @@ export const PatientHistorySchema = z.object({
     outcome: z.string().nullable(),
     follow_up_required: z.boolean().nullable(),
     severity: z.string().nullable(),
+    xray_img_id: z.number().nullable(),
 
     created_at: NullableDateTime,
 });

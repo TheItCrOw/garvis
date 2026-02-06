@@ -140,8 +140,12 @@ export default function Home({ garvisInstruction }: HomeProps) {
         <PatientFile
           isOpen={patientFileOpen}
           patient_id={selectedPatientId}
-          onClose={() => setPatientFileOpen(false)}
+          onClose={() => {
+            setPatientFileOpen(false);
+            setHistoryOpen(false); // optional but recommended
+          }}
           historyIsOpen={historyOpen}
+          onHistoryOpen={() => setHistoryOpen(true)}
           onHistoryClose={() => setHistoryOpen(false)}
         />
       </div>

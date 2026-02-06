@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.health import router as health_router
 from app.api.calendar import router as calendar_router
 from app.api.patient import router as patients_router
+from app.api.xray import router as xrays_router
 from app.database.duckdb_data_service import DataService
 from app.core.dto.garvis_dtos import GarvisTask
 from app.core.garvis import get_garvis
@@ -31,7 +32,7 @@ app.include_router(ws_garvis_router)
 app.include_router(health_router, prefix="/api")
 app.include_router(calendar_router, prefix="/api")
 app.include_router(patients_router, prefix="/api")
-ds = DataService()
+app.include_router(xrays_router, prefix="/api")
 print(f"LLM Flavor: {os.getenv("LLM_FLAVOR")}")
 garvis = get_garvis()
 

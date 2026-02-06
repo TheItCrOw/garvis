@@ -19,6 +19,7 @@ type PatientFileProps = {
    * If omitted, PatientFile controls history popup internally (button still works).
    */
   historyIsOpen?: boolean;
+  onHistoryOpen?: () => void;
   onHistoryClose?: () => void;
 
   className?: string;
@@ -30,6 +31,7 @@ export default function PatientFile({
   patient,
   patient_id,
   historyIsOpen,
+  onHistoryOpen,
   onHistoryClose,
   className,
 }: PatientFileProps) {
@@ -45,22 +47,17 @@ export default function PatientFile({
 
   const data = patient ?? fetchedPatient;
 
-  // Decide whether history popup is controlled or internal
-  const historyIsControlled = historyIsOpen !== undefined;
-  const historyOpen = historyIsControlled ? historyIsOpen : openHistoryInternal;
-
-  const closeHistory = () => {
-    if (historyIsControlled) onHistoryClose?.();
-    else setOpenHistoryInternal(false);
-  };
+  const isHistoryControlled = historyIsOpen !== undefined;
+  const historyOpen = isHistoryControlled ? historyIsOpen : openHistoryInternal;
 
   const openHistory = () => {
-    if (historyIsControlled) {
-      // controlled from outside: parent decides when to open
-      // (optionally you could add an onHistoryOpen callback)
-      return;
-    }
-    setOpenHistoryInternal(true);
+    if (isHistoryControlled) onHistoryOpen?.();
+    else setOpenHistoryInternal(true);
+  };
+
+  const closeHistory = () => {
+    if (isHistoryControlled) onHistoryClose?.();
+    else setOpenHistoryInternal(false);
   };
 
   // Mount/unmount + ensure open animation plays
@@ -130,10 +127,10 @@ export default function PatientFile({
 
   // Optional: if the PatientFile closes, also close internal history (controlled history is parent's job)
   useEffect(() => {
-    if (!isOpen && !historyIsControlled) {
+    if (!isOpen && !isHistoryControlled) {
       setOpenHistoryInternal(false);
     }
-  }, [isOpen, historyIsControlled]);
+  }, [isOpen, isHistoryControlled]);
 
   if (!shouldRender) return null;
 
@@ -176,10 +173,7 @@ export default function PatientFile({
           <div className="w-100">
             <button
               className="btn open-patient-history-btn"
-              onClick={() => {
-                setPatientId(fetchedPatient?.patient_id ?? null);
-                setOpenHistory(true);
-              }}
+              onClick={openHistory}
             >
               Open Patient History
             </button>

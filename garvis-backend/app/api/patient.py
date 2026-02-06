@@ -3,13 +3,11 @@ from __future__ import annotations
 from datetime import date
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query
-from app.database.duckdb_data_service import DataService
+from app.database.duckdb_data_service import data_service
 from app.core.models.database_models import CalendarEntry, Patient, PatientHistory
 from dataclasses import asdict
 
 router = APIRouter(prefix="/patients", tags=["patients"])
-
-ds = DataService()
 
 
 @router.get("/{patient_id}", response_model=None)
@@ -28,7 +26,7 @@ def get_patient_file(
     if patient_id <= 0:
         raise HTTPException(status_code=400, detail="patient_id must be positive")
 
-    patient: Patient = ds.get_patient_by_id(patient_id=patient_id)
+    patient: Patient = data_service.get_patient_by_id(patient_id=patient_id)
     return patient.to_dict()
 
 
@@ -48,7 +46,7 @@ def get_patient_history(
     if patient_id <= 0:
         raise HTTPException(status_code=400, detail="patient_id must be positive")
 
-    patient_history: list[PatientHistory] = ds.get_patient_history(
+    patient_history: list[PatientHistory] = data_service.get_patient_history(
         patient_id=patient_id
     )
 

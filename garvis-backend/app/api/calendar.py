@@ -3,13 +3,11 @@ from __future__ import annotations
 from datetime import date
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query
-from app.database.duckdb_data_service import DataService
+from app.database.duckdb_data_service import data_service
 from app.core.models.database_models import CalendarEntry
 from dataclasses import asdict
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
-
-ds = DataService()
 
 
 @router.get("/{doctor_id}", response_model=None)
@@ -32,7 +30,7 @@ def get_calendar_of_doctor_for_day(
     if doctor_id <= 0:
         raise HTTPException(status_code=400, detail="doctor_id must be positive")
 
-    entries: List[CalendarEntry] = ds.get_doctor_calendar_for_day(
+    entries: List[CalendarEntry] = data_service.get_doctor_calendar_for_day(
         doctor_id=doctor_id, day=day
     )
 

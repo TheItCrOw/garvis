@@ -1,3 +1,6 @@
+import base64
+import mimetypes
+from pathlib import Path
 import duckdb
 import os
 from contextlib import contextmanager
@@ -24,9 +27,9 @@ class DataService:
         if not os.path.exists(self.db_path):
             raise FileNotFoundError(f"DuckDB file not found: {self.db_path}")
 
-        print(f"Using DuckDB database at: {self.db_path}")
         with self.connection() as con:
             con.execute("SELECT 1").fetchone()
+        print(f"Setup the DataService with DuckDB under {db_path}")
 
     @contextmanager
     def connection(self) -> Generator[duckdb.DuckDBPyConnection, None, None]:
@@ -157,10 +160,14 @@ class DataService:
             rows = self._fetchall_dicts(
                 con,
                 """
-                SELECT *
-                FROM patient_history
-                WHERE patient_id = ?
-                ORDER BY event_start_at DESC
+                SELECT
+                ph.*,
+                x.xray_id AS xray_img_id
+                FROM patient_history ph
+                LEFT JOIN xray x
+                ON x.history_id = ph.history_id
+                WHERE ph.patient_id = ?
+                ORDER BY ph.event_start_at DESC
                 """,
                 (patient_id,),
             )
@@ -173,10 +180,14 @@ class DataService:
             rows = self._fetchall_dicts(
                 con,
                 """
-                SELECT *
-                FROM patient_history
-                WHERE patient_id = ? AND doctor_id = ?
-                ORDER BY event_start_at DESC
+                SELECT
+                ph.*,
+                x.xray_id AS xray_img_id
+                FROM patient_history ph
+                LEFT JOIN xray x
+                ON x.history_id = ph.history_id
+                WHERE ph.patient_id = ? AND ph.doctor_id = ?
+                ORDER BY ph.event_start_at DESC
                 """,
                 (patient_id, doctor_id),
             )
@@ -198,6 +209,119 @@ class DataService:
 
         history = self.get_patient_history(patient_id)
         return {"patient": patient, "history": history}
+
+    def get_xray_by_id(self, xray_id: int) -> Optional[Dict[str, Any]]:
+        """
+        #TODO: Brando, you can probably use this as an Agent Tool.
+        Returns the xray row as is in the DuckDB with the path to the actual image.
+        """
+        with self.connection() as con:
+            rows = self._fetchall_dicts(
+                con,
+                """
+                SELECT *
+                FROM xray
+                WHERE xray_id = ?
+                """,
+                (xray_id,),
+            )
+            return rows[0] if rows else None
+
+    def get_all_xrays_of_patient(self, patient_id: int) -> List[Dict[str, Any]]:
+        """
+        Returns xray table rows for the patient (metadata only, includes file_path).
+        """
+        with self.connection() as con:
+            return self._fetchall_dicts(
+                con,
+                """
+                SELECT *
+                FROM xray
+                WHERE patient_id = ?
+                ORDER BY acquired_at DESC, xray_id DESC
+                """,
+                (patient_id,),
+            )
+
+    def load_xray_image_bytes(self, xray_id: int) -> tuple[bytes, str]:
+        """
+        Given an xray_id, returns the bytes of the actual xray image.
+        Returns (bytes, mime).
+        """
+        xray = self.get_xray_by_id(xray_id)
+        if not xray:
+            raise KeyError(f"Unknown xray_id={xray_id}")
+
+        path = Path(xray["file_path"])
+
+        # For safety: ensure path stays inside my allowed base dir
+        base_dir = Path("data/xrays").resolve()
+        resolved = path.resolve()
+        if base_dir not in resolved.parents:
+            raise PermissionError("Invalid file path")
+
+        data = path.read_bytes()
+        mime, _ = mimetypes.guess_type(str(path))
+        return data, (mime or "application/octet-stream")
+
+    def load_xray_image_as_base64(
+        self,
+        xray_id: int,
+        *,
+        as_data_url: bool = False,
+    ) -> tuple[str, str]:
+        """
+        #TODO: Brando, you can probably use this as an Agent Tool.
+        Based on a xray id, returns (base64_string, mime) where base64_string is the encoded xray image.
+        If as_data_url=True, base64_string is a full data URL usable directly in <img src="...">.
+        """
+        data, mime = self.load_xray_image_bytes(xray_id)
+        b64 = base64.b64encode(data).decode("ascii")
+
+        if as_data_url:
+            return (f"data:{mime};base64,{b64}", mime)
+
+        return (b64, mime)
+
+    def load_all_xray_images_of_patient_as_bytes(
+        self,
+        patient_id: int,
+    ) -> List[Dict[str, Any]]:
+        """
+        Returns a list of:
+        { "xray_id": int, "mime": str, "bytes": bytes }
+        """
+        xrays = self.get_all_xrays_of_patient(patient_id)
+
+        out: List[Dict[str, Any]] = []
+        for x in xrays:
+            xray_id = int(x["xray_id"])
+            data, mime = self.load_xray_image_bytes(xray_id)
+            out.append({"xray_id": xray_id, "mime": mime, "bytes": data})
+
+        return out
+
+    def load_all_xray_images_of_patient_as_base64(
+        self,
+        patient_id: int,
+        *,
+        as_data_url: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """
+        #TODO: Brando, you can probably use this as an Agent Tool.
+        Returns a list of xray ids alongside their actual xray images encoded in base64:
+        { "xray_id": int, "mime": str, "base64": str }
+        If as_data_url=True, 'base64' will actually be a full data URL usable in <img src="...">.
+        """
+        xrays = self.get_all_xrays_of_patient(patient_id)
+
+        out: List[Dict[str, Any]] = []
+        for x in xrays:
+            xray_id = int(x["xray_id"])
+            b64, mime = self.load_xray_image_as_base64(xray_id, as_data_url=as_data_url)
+            out.append({"xray_id": xray_id, "mime": mime, "base64": b64})
+
+        return out
 
     def add_calendar_entry(
         self,
@@ -655,3 +779,6 @@ class DataService:
             tool_update_patient_address,
             tool_prescribe_medication,
         ]
+
+
+data_service = DataService()
