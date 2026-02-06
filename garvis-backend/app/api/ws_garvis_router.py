@@ -5,6 +5,7 @@ from fastapi.websockets import WebSocketState
 
 from app.core.garvis_ws_session import GarvisWebsocketSession
 from app.core.dto.ws_messages import (
+    WsLoginContent,
     WsMessage,
     WsMessageType,
     WsStartRecordingContent,
@@ -25,7 +26,7 @@ print("Done!")
 async def ws_audio(websocket: WebSocket):
     await websocket.accept()
     session = GarvisWebsocketSession(websocket, tts_service, stt_client)
-    await session.send_welcome_message()
+    # await session.send_welcome_message()
 
     try:
         while True:
@@ -61,6 +62,10 @@ async def ws_audio(websocket: WebSocket):
                         raw, content_cls=WsStopRecordingContent
                     )
                     await session.handle_stop_recording(parsed)
+                elif message_type == WsMessageType.LOGIN:
+                    print("[=> INCOMING] Login.")
+                    parsed = WsMessage.from_json(raw, content_cls=WsLoginContent)
+                    await session.handle_login(parsed)
                 else:
                     await session.send_error(
                         f"Unsupported control message: {message_type.value}"

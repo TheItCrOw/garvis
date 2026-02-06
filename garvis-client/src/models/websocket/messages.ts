@@ -3,6 +3,7 @@
 export enum WsMessageType {
     START_RECORDING = "startRecording",
     STOP_RECORDING = "stopRecording",
+    LOGIN = "login",
     ACK = "ack",
     TRANSCRIPT = "transcript",
     GARVIS = "garvis",
@@ -82,6 +83,10 @@ export type GarvisInstruction =
 
 export interface WsStopRecordingContent {
     reason?: string;
+}
+
+export interface WsLoginContent {
+    doctor_id?: number;
 }
 
 export interface WsAckContent {

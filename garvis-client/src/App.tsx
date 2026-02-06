@@ -19,8 +19,10 @@ function App() {
   const [unlocked, setUnlocked] = useState(false);
   const [garvisInstruction, setGarvisInstruction] =
     useState<GarvisInstruction | null>(null);
+  const [loggedInDoctorId, setLoggedInDoctorId] = useState(-1);
 
-  const enterApp = async () => {
+  const enterApp = async (doctorId: number) => {
+    setLoggedInDoctorId(doctorId);
     setUnlocked(true);
   };
 
@@ -40,6 +42,7 @@ function App() {
       {/* Only mount Garvis after the landing page is gone */}
       {unlocked && (
         <GarvisButton
+          loggedInDoctorId={loggedInDoctorId}
           onGarvisInstruction={(instruction) =>
             setGarvisInstruction(instruction)
           }

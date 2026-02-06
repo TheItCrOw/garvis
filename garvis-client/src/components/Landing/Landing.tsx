@@ -3,14 +3,21 @@ import "./Landing.css";
 import logo from "../../assets/logo.png";
 
 type LandingProps = {
-  onEnter: () => void;
+  onEnter: (doctorId: number) => void;
 };
 
 export default function Landing({ onEnter }: LandingProps) {
   const [isExiting, setIsExiting] = useState(false);
+  const [doctorId, setDoctorId] = useState<string>("");
+  const [showError, setShowError] = useState<boolean>(false);
 
   const handleStart = () => {
     if (isExiting) return;
+    if (!doctorId.trim()) {
+      setShowError(true);
+      return;
+    }
+
     setIsExiting(true);
   };
 
@@ -21,7 +28,7 @@ export default function Landing({ onEnter }: LandingProps) {
       aria-modal="true"
       onTransitionEnd={(e) => {
         if (e.target === e.currentTarget && isExiting) {
-          onEnter();
+          onEnter(Number.parseInt(doctorId));
         }
       }}
     >
@@ -31,12 +38,26 @@ export default function Landing({ onEnter }: LandingProps) {
           <h1 className="landing-title">arvis</h1>
         </div>
 
+        <input
+          type="text"
+          className="form-control w-100 text-center mt-3"
+          placeholder="Your Doctor Id:"
+          value={doctorId}
+          onChange={(e) => setDoctorId(e.target.value)}
+        />
+        <p
+          className="text-danger mb-0 text-center w-100 mt-1 small"
+          hidden={!showError}
+        >
+          Please provide your Id.
+        </p>
+
         <button
-          className="landing-button"
+          className="landing-button mt-3"
           onClick={handleStart}
           disabled={isExiting}
         >
-          Start
+          Login
         </button>
 
         <p className="landing-hint text-dark">

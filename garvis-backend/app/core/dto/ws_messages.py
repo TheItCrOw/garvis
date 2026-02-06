@@ -9,6 +9,7 @@ import uuid
 class WsMessageType(str, Enum):
     START_RECORDING = "startRecording"
     STOP_RECORDING = "stopRecording"
+    LOGIN = "login"
     ACK = "ack"
     TRANSCRIPT = "transcript"
     GARVIS = "garvis"
@@ -97,6 +98,18 @@ class WsGarvisContent:
 @dataclass
 class WsStopRecordingContent:
     reason: str = ""
+
+
+@dataclass
+class WsLoginContent:
+
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]) -> "WsStartRecordingContent":
+        return cls(
+            doctor_id=int(data["doctor_id"]),
+        )
+
+    doctor_id: int = -1
 
 
 @dataclass

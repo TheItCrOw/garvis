@@ -10,6 +10,7 @@ import {
     type WsAckContent,
     type WsErrorContent,
     type WsGarvisContent,
+    type WsLoginContent,
 } from "../models/websocket/messages"
 
 type Listener<T> = (msg: WsMessage<T>) => void;
@@ -92,6 +93,10 @@ export class GarvisWsClient {
 
     sendStartRecording(content: WsStartRecordingContent): void {
         this.send(createWsMessage(WsMessageType.START_RECORDING, content));
+    }
+
+    sendLogin(content: WsLoginContent): void {
+        this.send(createWsMessage(WsMessageType.LOGIN, content));
     }
 
     sendStopRecording(content: WsStopRecordingContent = {}): void {

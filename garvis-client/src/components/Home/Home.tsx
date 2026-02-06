@@ -115,7 +115,7 @@ export default function Home({ garvisInstruction }: HomeProps) {
       <div className="container py-4">
         <div className="text-center mt-0">
           <h1 className="mb-0" style={{ fontSize: "2.1rem" }}>
-            Welcome Sir,
+            Welcome,
           </h1>
           <p className="mb-4 small text-secondary">
             below you find your calendar.

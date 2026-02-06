@@ -5,10 +5,12 @@ import type { GarvisInstruction } from "../models/websocket/messages";
 
 type GarvisButtonProps = {
   onGarvisInstruction: (instruction: GarvisInstruction) => void;
+  loggedInDoctorId: number;
 };
 
 export default function GarvisButton({
   onGarvisInstruction,
+  loggedInDoctorId,
 }: GarvisButtonProps) {
   const {
     startRecording,
@@ -23,6 +25,7 @@ export default function GarvisButton({
   } = useGarvisWsClient({
     wsUrl: config.backendWsUrl,
     onGarvisInstruction: onGarvisInstruction,
+    loggedInDoctorId: loggedInDoctorId,
   });
 
   return (

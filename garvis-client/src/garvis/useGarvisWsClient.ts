@@ -7,9 +7,10 @@ import { playB64Audio, stopCurrentAudio } from "./audioUtils"
 type UseGarvisWsClientOptions = {
     wsUrl: string;
     onGarvisInstruction: (instruction: GarvisInstruction) => void;
+    loggedInDoctorId: number
 };
 
-export function useGarvisWsClient({ wsUrl, onGarvisInstruction }: UseGarvisWsClientOptions) {
+export function useGarvisWsClient({ wsUrl, onGarvisInstruction, loggedInDoctorId }: UseGarvisWsClientOptions) {
     const [isRecording, setIsRecording] = useState(false);
     const [garvisIsSpeaking, setGarvisIsSpeaking] = useState(false);
     const [garvisIsThinking, setGarvisIsThinking] = useState(false);
@@ -122,8 +123,11 @@ export function useGarvisWsClient({ wsUrl, onGarvisInstruction }: UseGarvisWsCli
                 await p;
                 connectingRef.current = null;
 
-                console.log("Websocket connected. client.isOpen =", clientRef.current.isOpen());
-                if (!cancelled) setWsIsConnected(true);
+                console.log(`Websocket connected for doctor ${loggedInDoctorId}. client.isOpen = ${clientRef.current.isOpen()}`);
+                clientRef.current.sendLogin({ doctor_id: loggedInDoctorId });
+                if (!cancelled) {
+                    setWsIsConnected(true);
+                }
             } catch (e: any) {
                 connectingRef.current = null;
                 console.error("Websocket init failed:", e);

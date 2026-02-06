@@ -11,6 +11,7 @@ from app.core.dto.ws_messages import (
     WsAckContent,
     WsErrorContent,
     WsGarvisContent,
+    WsLoginContent,
     WsMessage,
     WsMessageType,
     WsStartRecordingContent,
@@ -141,6 +142,46 @@ class GarvisWebsocketSession:
             )
             # send back to client
             await self.send_garvis_answer("Completion", garvis_reply, audio_b64, mime)
+
+    async def handle_login(self, msg: WsMessage[WsLoginContent]):
+        doctor = self.ds.get_doctor_by_id(msg.content.doctor_id)
+        now = datetime.now()
+        day = get_day_info(now)
+        hour = now.strftime("%I").lstrip("0")
+        am_pm = now.strftime("%p").lower()
+        welcome = f"Welcome {doctor.first_name}, it's {day.weekday} the {day.day} of {day.month}, {hour} o'clock {am_pm}."
+        text = f"""
+        Doctor {doctor.first_name} {doctor.last_name} (specialized in {doctor.specialty}) with id {doctor.doctor_id} just logged in.
+        The current datetime is: {str(datetime.now())} and you'll be the doctor's assistant for today.
+        To start the interaction, you greet him or her with the *exact* following words:
+        "{welcome}"
+        """
+        # For the login, we don't need the actual reply, we have a standard message to save time.
+        asyncio.create_task(
+            self.garvis.handle_task(GarvisTask(session_id=self.session_id, query=text))
+        )
+        audio_b64, mime = await asyncio.to_thread(
+            self.tts_service.synthesize_speech_mp3_b64,
+            welcome,
+        )
+        # send welcome back to client
+        await self.send_garvis_answer(
+            "Completion",
+            GarvisReply(
+                session_id=self.session_id,
+                query=text,
+                reply=welcome,
+                view="Calendar",
+                action="Calendar",
+                parameters={
+                    "doctor_id": doctor.doctor_id,
+                    "date": str(now.strftime("%Y-%m-%d")),
+                },
+                intent_confidence=1.0,
+            ),
+            audio_b64,
+            mime,
+        )
 
     async def handle_start_recording(self, msg: WsMessage[WsStartRecordingContent]):
         c = msg.content
