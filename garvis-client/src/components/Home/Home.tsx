@@ -9,12 +9,17 @@ import {
   GarvisOpenView,
   type GarvisInstruction,
 } from "../../models/websocket/messages";
+import logo from "./../../assets/logo.png";
 
 type HomeProps = {
   garvisInstruction: GarvisInstruction | null;
+  loggedInDoctorId: number;
 };
 
-export default function Home({ garvisInstruction }: HomeProps) {
+export default function Home({
+  garvisInstruction,
+  loggedInDoctorId,
+}: HomeProps) {
   const [entries, setEntries] = useState<CalendarEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,10 +91,9 @@ export default function Home({ garvisInstruction }: HomeProps) {
       setError(null);
 
       try {
-        // TODO: Use the correct today below and use an appropriate doctor_id!
         const today = toIsoDateOnlyLocal(new Date());
         //const today = "2026-02-03";
-        const data = await getCalendarOfDoctor(1, today);
+        const data = await getCalendarOfDoctor(loggedInDoctorId, today);
         if (!cancelled) setEntries(data);
       } catch (e) {
         if (!cancelled) {
@@ -122,7 +126,12 @@ export default function Home({ garvisInstruction }: HomeProps) {
           </p>
           {/* <hr className="mt-2 mb-3 text-secondary" /> */}
 
-          {loading && <p className="text-secondary">Loading…</p>}
+          {loading && (
+            <div className="card text-primary small text-center w-100">
+              <p className="mb-1">I'm setting everything up for you...</p>
+              <img src={logo} width={50} style={{ alignSelf: "center" }} />
+            </div>
+          )}
           {error && <p className="text-danger">{error}</p>}
 
           {!loading && !error && (

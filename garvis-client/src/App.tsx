@@ -30,14 +30,21 @@ function App() {
     <>
       <Navbar />
 
-      <Routes>
-        <Route
-          path="/"
-          element={<Home garvisInstruction={garvisInstruction} />}
-        />
-        <Route path="/about" element={<About />} />
-        <Route path="/settings" element={<Settings />} />
-      </Routes>
+      {unlocked && (
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <Home
+                garvisInstruction={garvisInstruction}
+                loggedInDoctorId={loggedInDoctorId}
+              />
+            }
+          />
+          <Route path="/about" element={<About />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      )}
 
       {/* Only mount Garvis after the landing page is gone */}
       {unlocked && (

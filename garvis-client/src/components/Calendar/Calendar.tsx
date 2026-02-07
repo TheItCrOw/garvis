@@ -59,7 +59,11 @@ export function Calendar({
   }, [entries]);
 
   if (sortedEntries.length === 0) {
-    return <div className={"card " + className}>No calendar entries.</div>;
+    return (
+      <div className={"card " + className}>
+        No calendar entries for this date.
+      </div>
+    );
   }
 
   return (
