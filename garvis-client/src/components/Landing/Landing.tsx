@@ -41,7 +41,7 @@ export default function Landing({ onEnter }: LandingProps) {
         <input
           type="text"
           className="form-control w-100 text-center mt-3"
-          placeholder="Your Doctor Id:"
+          placeholder="Your Doctor Id..."
           value={doctorId}
           onChange={(e) => setDoctorId(e.target.value)}
         />
