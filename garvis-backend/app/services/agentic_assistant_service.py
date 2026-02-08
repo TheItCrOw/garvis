@@ -73,9 +73,9 @@ class AgenticAssistantService:
         if cls._ollama_client_pure_text is None:
             with cls._ollama_lock:
                 if cls._ollama_client_pure_text is None:
-                    print("instantiating ollama!")
+                    print("Instantiating Text MedGemma!")
                     cls._ollama_client_pure_text = ChatOllama(
-                        model=agent_constants.MEDGEMMA_MODEL_NAME,
+                        model=os.getenv("MEDGEMMA_TEXT_ONLY_MODEL_NAME"),
                         temperature=0,
                     )
         return cls._ollama_client_with_image
@@ -85,9 +85,9 @@ class AgenticAssistantService:
         if cls._ollama_client_with_image is None:
             with cls._ollama_lock:
                 if cls._ollama_client_with_image is None:
-                    print("instantiating ollama!")
+                    print("Instantiating Vision MedGemma!")
                     cls._ollama_client_with_image = ChatOllama(
-                        model=agent_constants.MEDGEMMA_MODEL_WITH_IMAGE_NAME,
+                        model=os.getenv("MEDGEMMA_WITH_IMAGE_MODEL_NAME"),
                         temperature=0,
                     )
         return cls._ollama_client_with_image
@@ -168,13 +168,11 @@ class AgenticAssistantService:
         Or in cases where for certain situations, what is the first aid or certain diseases. Occasionally, you will also get medical images 
         in base 64 format.
         """
-        handler = AssertImageSent(raise_if_missing=True)
         config={}
-        #config["callbacks"] =  [handler]
 
         resp = AgenticAssistantService.get_ollama_pure_text().invoke(
             [
-                SystemMessage(content=agent_constants.MEDGEMMA_SYSEM_PROMPT),
+                SystemMessage(content=agent_constants.MEDGEMMA_TEXT_ONLY_MODEL_NAME),
                 HumanMessage(content=task),
             ]
             , config=config
@@ -189,15 +187,15 @@ class AgenticAssistantService:
         image_mime: Annotated[Optional[str], InjectedState("image_mime")],
     ) -> str:
         """
-        This is the MEDGEMMA tool when submitting text and images. Use the Med Gemma model for medical-related inquiries and when analyzing medical images. Examples are like when asking what disease or ailment shows certain symptoms, or summarizing a medical image such as xray, CT-scan.
+        This is the MEDGEMMA tool when submitting text with images. Use the Med Gemma model for medical-related inquiries and when analyzing medical images. Examples are like when asking what disease or ailment shows certain symptoms, or summarizing a medical image such as xray, CT-scan.
         Or in cases where for certain situations, what is the first aid or certain diseases.
         in base 64 format.
         """        
-        handler = AssertImageSent(raise_if_missing=True)
+        #handler = AssertImageSent(raise_if_missing=True)
 
         content_parts = [{"type": "text", "text": task}]
 
-        if image_b64:
+        if(image_b64):
             mime = image_mime or "image/jpeg"
             content_parts.insert(
                 0,
@@ -206,10 +204,10 @@ class AgenticAssistantService:
 
         resp = AgenticAssistantService.get_ollama_with_image() .invoke(
             [
-                SystemMessage(content=agent_constants.MEDGEMMA_SYSEM_PROMPT),
+                SystemMessage(content=agent_constants.MEDGEMMA_WITH_IMAGE_MODEL_PROMPT),
                 HumanMessage(content=content_parts),
             ],
-            config={"callbacks": [handler]},
+            #config={"callbacks": [handler]},
         )
         return resp.content
 
@@ -268,7 +266,7 @@ class AgenticAssistantService:
         # Return only the state updates you want to apply
         return state
 
-    def _build_graph(self):
+    def _build_graph(self, persist_graph_visualization=False):
         checkpointer = InMemorySaver()
         builder = StateGraph(AgentState)
         builder.add_node("assistant", self._assistant_node)
@@ -284,9 +282,11 @@ class AgenticAssistantService:
         builder.add_edge("route_to_client_command", END)
 
         compiled_graph =  builder.compile(checkpointer=checkpointer)
-        png_bytes = compiled_graph.get_graph().draw_mermaid_png()
-        with open("./app/services/graph_visualization/graph.png", "wb") as f:
-            f.write(png_bytes)
+        
+        if(persist_graph_visualization):
+            png_bytes = compiled_graph.get_graph().draw_mermaid_png()
+            with open("./app/services/graph_visualization/graph.png", "wb") as f:
+                f.write(png_bytes)
 
         return compiled_graph
 

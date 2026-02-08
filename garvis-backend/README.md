@@ -16,10 +16,9 @@ python -m pip install -U pip
 pip install -e ".[dev]"
 ```
 
-once you've done this
+# once you've done this
 
 ```
-[FOR BACKEND]
 uv run main.py
 #or
 python main.py
@@ -28,7 +27,6 @@ python main.py
 To see current backend documentation
 
 ```
-[BACKEND]
 http://127.0.0.1:8000/docs
 http://127.0.0.1:8000/redoc
 ```
@@ -61,4 +59,14 @@ hit CTRL+SHIFT+D and configure this from within your IDE
     }
   ]
 }
+```
+
+We need to pull these ollama models
+
+```
+ollama pull MedAIBase/MedGemma1.5:4b
+ollama run MedAIBase/MedGemma1.5:4b
+
+ollama pull thiagomoraes/medgemma-1.5-4b-it:Q4_K_M
+ollama run thiagomoraes/medgemma-1.5-4b-it:Q4_K_M
 ```

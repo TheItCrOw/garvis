@@ -12,7 +12,7 @@ venv/
 
 # Environment / secrets
 .env
-.env.*
+.env
 *.pem
 *.key
 
