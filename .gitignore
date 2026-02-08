@@ -1,6 +1,8 @@
 .vscode/
 garvis-backend/uv.lock
 
+garvis-backend/app/services/graph_visualization/
+
 langgraph-lab/root/
 langgraph-lab/01. control-flow/*.ipynb_checkpoints
 langgraph-lab/02. agents/*.ipynb_checkpoints

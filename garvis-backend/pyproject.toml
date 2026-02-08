@@ -35,7 +35,8 @@ dependencies = [
   "ddgs",  
   "duckduckgo-search",
   "tabulate",
-  "pytz"
+  "pytz",
+  "python-multipart"
 ]
 
 [project.optional-dependencies]
