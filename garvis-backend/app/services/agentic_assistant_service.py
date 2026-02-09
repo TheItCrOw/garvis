@@ -191,7 +191,7 @@ class AgenticAssistantService:
         Or in cases where for certain situations, what is the first aid or certain diseases.
         in base 64 format.
         """        
-        #handler = AssertImageSent(raise_if_missing=True)
+        handler = AssertImageSent(raise_if_missing=True)
 
         content_parts = [{"type": "text", "text": task}]
 
@@ -207,7 +207,7 @@ class AgenticAssistantService:
                 SystemMessage(content=agent_constants.MEDGEMMA_WITH_IMAGE_MODEL_PROMPT),
                 HumanMessage(content=content_parts),
             ],
-            #config={"callbacks": [handler]},
+            config={"callbacks": [handler]},
         )
         return resp.content
 
