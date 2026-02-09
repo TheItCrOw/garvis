@@ -7,6 +7,7 @@ import os
 from app.core.dto.agent_state import AgentState
 from app.core.dto.garvis_dtos import GarvisReply, GarvisTask
 from app.database.duckdb_data_service import DataService
+import app.utils.image_utils as image_utils
 
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_community.tools import DuckDuckGoSearchRun
@@ -307,9 +308,17 @@ class AgenticAssistantService:
 
         if image_path:
             image_mime, _ = mimetypes.guess_type(image_path)
-            image_mime = image_mime or "image/jpeg"
+
             with open(image_path, "rb") as f:
-                image_b64 = base64.b64encode(f.read()).decode("utf-8")
+                raw_bytes = f.read()
+
+            if (image_mime in ("image/tiff", "image/x-tiff")) or image_path.lower().endswith((".tif", ".tiff")):
+                jpeg_bytes = image_utils.tiff_bytes_to_jpeg_bytes(raw_bytes, quality=85)
+                image_b64 = base64.b64encode(jpeg_bytes).decode("utf-8")
+                image_mime = "image/jpeg"
+            else:
+                image_b64 = base64.b64encode(raw_bytes).decode("utf-8")
+                image_mime = image_mime or "image/jpeg"
 
             blocks.append({"type": "image_url", "image_url": {"url": f"data:{image_mime};base64,{image_b64}"}})
 
