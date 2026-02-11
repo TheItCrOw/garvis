@@ -1,0 +1,44 @@
+services:
+  backend:
+    build: ./garvis-backend
+    container_name: garvis-backend
+    ports:
+      - "8000:8000"
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/adc.json
+      GOOGLE_CLOUD_QUOTA_PROJECT: ${GOOGLE_CLOUD_QUOTA_PROJECT}
+    volumes:
+      - ${ADC_PATH}:/secrets/adc.json:ro
+    depends_on:
+      - ollama
+
+  client:
+    build: ./garvis-client
+    container_name: garvis-client
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_BACKEND_WS_URL: ${VITE_BACKEND_WS_URL}
+      VITE_API_BASE: ${VITE_API_BASE}
+    depends_on:
+      - backend
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: garvis-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    # If your Docker host supports NVIDIA GPU passthrough, this enables it.
+    # If you get errors, remove this whole "deploy:" section and it will run on CPU.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  ollama:
