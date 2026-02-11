@@ -36,7 +36,8 @@ dependencies = [
   "duckduckgo-search",
   "tabulate",
   "pytz",
-  "python-multipart"
+  "python-multipart",
+  "Pillow"
 ]
 
 [project.optional-dependencies]

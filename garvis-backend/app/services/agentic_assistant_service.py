@@ -313,7 +313,7 @@ class AgenticAssistantService:
                 raw_bytes = f.read()
 
             if (image_mime in ("image/tiff", "image/x-tiff")) or image_path.lower().endswith((".tif", ".tiff")):
-                jpeg_bytes = image_utils.tiff_bytes_to_jpeg_bytes(raw_bytes, quality=85)
+                jpeg_bytes = image_utils.tiff_bytes_to_jpeg_bytes(raw_bytes)
                 image_b64 = base64.b64encode(jpeg_bytes).decode("utf-8")
                 image_mime = "image/jpeg"
             else:
