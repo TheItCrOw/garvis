@@ -1,7 +1,9 @@
 # Garvis Backend
 
 ## Prerequisite
+
 https://docs.cloud.google.com/sdk/docs/install-sdk
+
 1. we need to setup this on the local machine as we are utilizing Google STT and TSS
 
 ## Setup
@@ -14,6 +16,22 @@ py -3.12 -m venv .venv
 .venv\Scripts\activate
 python -m pip install -U pip
 pip install -e ".[dev]"
+```
+
+## Google Cloud `gcloud`
+
+Since we use services provided by the Google Cloud, you need to authenticate yourself to it and set a billing project. [Install the `gcloud`](https://docs.cloud.google.com/sdk/docs/install-sdk?hl=de) CLI in your system.
+
+### Login
+
+```
+gcloud auth application-default login
+```
+
+a window will prompt you to login. Afterwards, set a billing project (if you have no project yet, create one in the [Google Cloud Console Web interface](https://console.cloud.google.com/welcome?hl=de&project=kaggle-medgemma-hackathon-2026))
+
+```
+gcloud auth application-default set-quota-project [YOUR_PROJECT_NAME]
 ```
 
 # once you've done this
@@ -36,7 +54,6 @@ To run potential tests:
 ```
 pytest
 ```
-
 
 To run debug using visual-studio code
 
