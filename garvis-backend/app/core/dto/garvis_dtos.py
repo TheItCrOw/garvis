@@ -18,3 +18,4 @@ class GarvisTask:
     session_id: str
     query: str
     uploaded_file_path:str= None
+    base64_image:str=None

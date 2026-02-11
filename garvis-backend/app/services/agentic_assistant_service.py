@@ -21,6 +21,7 @@ from langchain_openai import ChatOpenAI
 from langchain.tools import InjectedState  # per docs
 from threading import Lock
 from typing import ClassVar, Optional, Annotated
+from fastapi import HTTPException, status
 
 
 #==================
@@ -296,9 +297,9 @@ class AgenticAssistantService:
         , image_path: Optional[str] = None
         , thread_id: str = "demo"
         , display_tool_call: bool = True
+        , image_b64: Optional[str] = None
     ) -> str:
         
-        image_b64 = None
         image_mime = None
         cfg = {"configurable": {"thread_id": thread_id}}
 
@@ -306,14 +307,26 @@ class AgenticAssistantService:
         if(user_text.strip()):
             blocks.append({"type": "text", "text": user_text.strip()})
 
-        if image_path:
+        if(image_b64):
+            validation_check = image_utils.detect_image_mime_pillow(image_b64)
+
+            if(not validation_check["is_image"]):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="base64 string is not an image, incomplete, or corrupted",
+                )
+            else:
+                image_mime = validation_check["mime"]
+                blocks.append({"type": "image_url", "image_url": {"url": f"data:{image_mime};base64,{image_b64}"}})
+
+        if(image_path):
             image_mime, _ = mimetypes.guess_type(image_path)
 
             with open(image_path, "rb") as f:
                 raw_bytes = f.read()
 
             if (image_mime in ("image/tiff", "image/x-tiff")) or image_path.lower().endswith((".tif", ".tiff")):
-                jpeg_bytes = image_utils.tiff_bytes_to_jpeg_bytes(raw_bytes, quality=85)
+                jpeg_bytes = image_utils.tiff_bytes_to_jpeg_bytes(raw_bytes)
                 image_b64 = base64.b64encode(jpeg_bytes).decode("utf-8")
                 image_mime = "image/jpeg"
             else:
@@ -362,6 +375,7 @@ class AgenticAssistantService:
             image_path=garvis_task.uploaded_file_path,
             thread_id=garvis_task.session_id,
             display_tool_call=True,
+            image_b64=garvis_task.base64_image
         )
 
         return GarvisReply(

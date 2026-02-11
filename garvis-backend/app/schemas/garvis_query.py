@@ -1,15 +1,17 @@
-from fastapi import FastAPI, File, UploadFile, Form, Depends
+from fastapi import Form
 from pydantic import BaseModel
+from typing import Optional
 
-# 1. Define your data model
 class GarvisQuery(BaseModel):
     session_id: str
     query: str
+    base64_image: Optional[str] = ""  
 
     @classmethod
     def as_form(
         cls,
         session_id: str = Form(...),
         query: str = Form(...),
+        base64_image: Optional[str] = Form(None, description="Base64 image", example="")
     ) -> "GarvisQuery":
-        return cls(session_id=session_id, query=query)    
+        return cls(session_id=session_id, query=query, base64_image=base64_image)

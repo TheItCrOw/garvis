@@ -46,7 +46,7 @@ def root():
 
 @app.post("/invoke_agent/")
 async def invoke_agent(item: GarvisQuery):
-    task = GarvisTask(session_id=item.session_id, query=item.query)
+    task = GarvisTask(session_id=item.session_id, query=item.query, base64_image=item.base64_image)
     reply = await garvis.handle_task(task)
     return {
         "message": "Item created successfully",
