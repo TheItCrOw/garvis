@@ -1,22 +1,49 @@
 # Garvis PWA Client
 
-## Setup
+## Prerequisite
 
-You need NodeJS and npm installed. Then, install the modules once and run it:
-
-You may need to update your nodejs
-https://nodejs.org/en/download
-then you may need to use a specific version nvm use 24
-```
-npm install
-npm run dev
-```
-
-If you haven't, create a `.env` file and enter the following parameters:
+Setup a .env file in the root folder of the `garvis-client` (this folder):
 
 ```
 VITE_BACKEND_WS_URL=ws://localhost:8000/ws/audio
 VITE_API_BASE=http://localhost:8000/api
 ```
 
-If you run this client in a non-standard localhost, then adjust them appropriately.
+If you plan to run or already ran the `garvis-backend` in a non-standard localhost, then adjust these appropriately.
+
+## Setup
+
+You need [NodeJS and npm installed](https://nodejs.org/en/download) (v24 would be best). Then, install the modules once and run it:
+
+```
+npm install
+npm run dev
+```
+
+## Docker
+
+If you want to run the client via Docker, first build:
+
+```
+docker build -t garvis-client .
+```
+
+Then run the container with the right parameters:
+
+### Windows
+
+```
+docker run -p 5173:5173 ^
+  -e VITE_BACKEND_WS_URL=ws://localhost:8000/ws/audio ^
+  -e VITE_API_BASE=http://localhost:8000/api ^
+  garvis-client
+```
+
+### Linux
+
+```
+docker run -p 5173:5173 \
+  -e VITE_BACKEND_WS_URL=ws://localhost:8000/ws/audio \
+  -e VITE_API_BASE=http://localhost:8000/api \
+  garvis-client
+```

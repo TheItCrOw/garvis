@@ -9,6 +9,7 @@ __pycache__/
 # Virtualenv
 .venv/
 venv/
+start_via_docker.sh
 
 # Environment / secrets
 .env
