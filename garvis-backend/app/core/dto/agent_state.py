@@ -11,4 +11,5 @@ class AgentState(TypedDict, total=False):
     intent_confidence: float = Field(0.75, ge=0.0, le=1.0)
     reasoning_short: str = Field("", description="1 short sentence rationale; no private or sensitive data.")
     image_b64: Optional[str]
+    image_b64_lower_quality: Optional[str]
     image_mime: Optional[str]
