@@ -1,6 +1,40 @@
 import app.constants.agentic_assistant_constants as agent_constants
 import duckdb
 import re
+import hashlib
+from langchain_core.callbacks import BaseCallbackHandler
+
+class AssertImageSent(BaseCallbackHandler):
+    def __init__(self, *, raise_if_missing: bool = True):
+        self.raise_if_missing = raise_if_missing
+
+    def on_chat_model_start(self, serialized, messages, **kwargs):
+        found = False
+        for batch in messages:
+            for msg in batch:
+                for url in iter_image_urls(getattr(msg, "content", None)):
+                    if isinstance(url, str) and "base64," in url:
+                        b64 = url.split("base64,", 1)[1]
+                        h = hashlib.sha256(b64.encode("utf-8")).hexdigest()[:12]
+                        print(f"[probe] image data url detected, sha256[:12]={h}, b64_len={len(b64)}")
+                        found = True
+
+        if self.raise_if_missing and not found:
+            raise RuntimeError("No base64 image block found in LLM input messages.")
+
+def iter_image_urls(content):
+    if isinstance(content, list):
+        for part in content:
+            if not isinstance(part, dict):
+                continue
+            t = part.get("type")
+            if t in ("image_url", "input_image"):
+                image_url = part.get("image_url")
+                if isinstance(image_url, dict):
+                    yield image_url.get("url")
+                elif isinstance(image_url, str):
+                    yield image_url
+
 
 def sanitize_sql(sql: str) -> str:
 

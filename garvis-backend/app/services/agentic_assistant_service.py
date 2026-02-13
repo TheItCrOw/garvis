@@ -22,41 +22,7 @@ from langchain.tools import InjectedState  # per docs
 from threading import Lock
 from typing import ClassVar, Optional, Annotated
 from fastapi import HTTPException, status
-
-
-import hashlib
-from langchain_core.callbacks import BaseCallbackHandler
-
-def iter_image_urls(content):
-    if isinstance(content, list):
-        for part in content:
-            if not isinstance(part, dict):
-                continue
-            t = part.get("type")
-            if t in ("image_url", "input_image"):
-                image_url = part.get("image_url")
-                if isinstance(image_url, dict):
-                    yield image_url.get("url")
-                elif isinstance(image_url, str):
-                    yield image_url
-
-class AssertImageSent(BaseCallbackHandler):
-    def __init__(self, *, raise_if_missing: bool = True):
-        self.raise_if_missing = raise_if_missing
-
-    def on_chat_model_start(self, serialized, messages, **kwargs):
-        found = False
-        for batch in messages:
-            for msg in batch:
-                for url in iter_image_urls(getattr(msg, "content", None)):
-                    if isinstance(url, str) and "base64," in url:
-                        b64 = url.split("base64,", 1)[1]
-                        h = hashlib.sha256(b64.encode("utf-8")).hexdigest()[:12]
-                        print(f"[probe] image data url detected, sha256[:12]={h}, b64_len={len(b64)}")
-                        found = True
-
-        if self.raise_if_missing and not found:
-            raise RuntimeError("No base64 image block found in LLM input messages.")
+from app.utils.agent_utils import AssertImageSent
 
 class AgenticAssistantService:
     _ollama_lock: ClassVar[Lock] = Lock()
@@ -164,7 +130,7 @@ class AgenticAssistantService:
     @tool
     def medgemma_reasoner_text(task: str) -> str:
         """
-        This is the MEDGEMMA tool for pure text only. Use the Med Gemma model for medical-related inquiries, like asking what disease or ailment shows certain symptoms, or summarizing a medical image such as xray, CT-scan.
+        This is the MEDGEMMA tool for pure text only. Use the Med Gemma model for medical-related inquiries, like asking what disease or ailment shows certain symptoms.
         Or in cases where for certain situations, what is the first aid or certain diseases. Occasionally, you will also get medical images 
         in base 64 format.
         """
@@ -187,7 +153,8 @@ class AgenticAssistantService:
         image_mime: Annotated[Optional[str], InjectedState("image_mime")],
     ) -> str:
         """
-        This is the MEDGEMMA tool when submitting text with images. Use the Med Gemma model for medical-related inquiries and when analyzing medical images. Examples are like when asking what disease or ailment shows certain symptoms, or summarizing a medical image such as xray, CT-scan.
+        This is the MEDGEMMA tool when submitting text with images. Use the Med Gemma model for medical-related inquiries and when analyzing medical images.
+        Examples are like when asking what disease or ailment shows certain symptoms, or summarizing a medical image such as xray, CT-scan.
         Or in cases where for certain situations, what is the first aid or certain diseases.
         in base 64 format.
         """        
