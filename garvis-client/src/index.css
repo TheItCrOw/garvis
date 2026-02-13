@@ -238,3 +238,123 @@ body {
   transform: translateY(0);
   opacity: 1;
 }
+
+/* Sticky, small preview that can expand fullscreen */
+#garvis-reply-div {
+  position: fixed;
+  top: 0;
+  z-index: 2;
+
+  /* collapsed size */
+  height: 90px;
+  width: 100%;
+  border-bottom: 1px lightgray solid;
+
+  background: rgba(255, 255, 255, 0.8);
+  color: black;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  transition:
+    height 220ms ease,
+    background 220ms ease;
+  overflow: hidden;
+
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+#garvis-reply-div .garvis-reply-inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+#garvis-reply-div .garvis-reply-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding-left: 12px;
+  padding-right: 12px;
+  padding-top: 10px;
+  padding-bottom: 6px;
+}
+
+#garvis-reply-div .garvis-reply-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+#garvis-reply-div .garvis-reply-close {
+  display: none; /* only show when open */
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 1.1rem;
+  padding: 8px;
+  margin: -6px;
+  cursor: pointer;
+}
+
+#garvis-reply-div .garvis-reply-body {
+  padding: 0 12px 12px 12px;
+  overflow: hidden;
+}
+
+/* Preview style: clamp to ~2 lines */
+#garvis-reply-div:not(.open) .garvis-reply-body p {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  line-height: 1.2rem;
+  max-height: calc(1.2rem * 2);
+}
+
+#garvis-reply-div .garvis-reply-hint {
+  margin-top: auto;
+  padding: 0 12px 10px 12px;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+/* Expanded fullscreen overlay */
+#garvis-reply-div.open {
+  position: fixed;
+  inset: 0;
+  height: calc(100dvh + 2px);
+  width: 100vw;
+  z-index: 2000;
+
+  background: rgba(10, 10, 10, 0.96);
+  color: white !important;
+  transition:
+    height 260ms ease,
+    background 260ms ease;
+  cursor: default;
+}
+
+/* In open state, allow scrolling the body */
+#garvis-reply-div.open .garvis-reply-body {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Show close button when open */
+#garvis-reply-div.open .garvis-reply-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* When open, don't clamp text */
+#garvis-reply-div.open .garvis-reply-body p {
+  display: block;
+  max-height: none;
+  overflow: visible;
+}

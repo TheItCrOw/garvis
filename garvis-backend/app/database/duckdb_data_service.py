@@ -557,7 +557,7 @@ class DataService:
 
     # TOOOOOOO...OOOOOOOOLS
 
-    def return_tools(self):
+    def return_agent_tools(self):
         @tool
         def doctor_by_id(doctor_id: int) -> Optional["Doctor"]:
             """Query the DuckDB for the available doctors using doctor_id as the parameter.
@@ -651,7 +651,6 @@ class DataService:
             Ensure that the required fields have values and confirm them from the user before adding.
             Returns the created CalendarEntry row. Only invoke this tool if the intent is clear
             """
-
             return self.add_calendar_entry(
                 doctor_id=doctor_id,
                 patient_id=patient_id,
@@ -719,8 +718,7 @@ class DataService:
             Also updates updated_at to now.
             Returns the updated Patient or None if patient_id not found.
             """
-
-            self.update_patient_address(
+            return self.update_patient_address(
                 patient_id=patient_id,
                 address_line1=address_line1,
                 address_line2=address_line2,
@@ -749,7 +747,6 @@ class DataService:
             This is modeled as creating a patient_history entry
             with prescription_given filled.
             """
-
             return self.prescribe_medication(
                 patient_id=patient_id,
                 doctor_id=doctor_id,
@@ -762,6 +759,41 @@ class DataService:
                 severity=severity,
                 follow_up_required=follow_up_required,
                 outcome=outcome,
+            )
+
+        @tool
+        def xray_by_id(xray_id: int) -> Optional[Dict[str, Any]]:
+            """
+            Query the DuckDB for an xray row by xray_id (metadata incl. file_path).
+            Only query this table when explicitly instructed.
+            """
+            return self.get_xray_by_id(xray_id)
+
+        @tool
+        def xray_image_as_base64(
+            xray_id: int,
+            as_data_url: bool = False,
+        ) -> tuple[str, str]:
+            """
+            Returns (base64_string, mime) for the xray image.
+            If as_data_url=True, base64_string is a full data URL usable in <img src="...">.
+            Only invoke when explicitly instructed.
+            """
+            return self.load_xray_image_as_base64(xray_id, as_data_url=as_data_url)
+
+        @tool
+        def all_patient_xray_images_as_base64(
+            patient_id: int,
+            as_data_url: bool = False,
+        ) -> List[Dict[str, Any]]:
+            """
+            Returns a list of:
+            { "xray_id": int, "mime": str, "base64": str }
+            If as_data_url=True, 'base64' is a full data URL usable in <img src="...">.
+            Only invoke when explicitly instructed.
+            """
+            return self.load_all_xray_images_of_patient_as_base64(
+                patient_id, as_data_url=as_data_url
             )
 
         # return the tools
@@ -778,6 +810,9 @@ class DataService:
             tool_add_patient_history,
             tool_update_patient_address,
             tool_prescribe_medication,
+            xray_by_id,
+            xray_image_as_base64,
+            all_patient_xray_images_as_base64,
         ]
 
 

@@ -17,6 +17,7 @@ export function useGarvisWsClient({ wsUrl, onGarvisInstruction, loggedInDoctorId
     const [wsIsConnected, setWsIsConnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [transcripts, setTranscripts] = useState<string[]>([]);
+    const [garvisReply, setGarvisReply] = useState<string>("");
 
     const didInitRef = useRef(false);
     const clientRef = useRef<GarvisWsClient | null>(null);
@@ -49,6 +50,7 @@ export function useGarvisWsClient({ wsUrl, onGarvisInstruction, loggedInDoctorId
             // Stop any speech that is currently playing
             stopCurrentAudio();
             setGarvisIsThinking(false);
+            setGarvisReply(m.content.answer);
 
             // If Garvis tells us to open a view or apply an action, check it and execute it
             if (m.content.open_view !== undefined && m.content.open_view !== "") {
@@ -215,6 +217,6 @@ export function useGarvisWsClient({ wsUrl, onGarvisInstruction, loggedInDoctorId
         await cleanup();
     }, [cleanup, isRecording]);
 
-    return { startRecording, stopRecording, isRecording, error, transcripts, wsIsConnected, garvisIsSpeaking, stopGarvisSpeech, garvisIsThinking };
+    return { startRecording, stopRecording, isRecording, error, transcripts, garvisReply, wsIsConnected, garvisIsSpeaking, stopGarvisSpeech, garvisIsThinking };
 
 }

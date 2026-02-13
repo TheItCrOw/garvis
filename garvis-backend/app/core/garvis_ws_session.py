@@ -279,4 +279,4 @@ class GarvisWebsocketSession:
 
         except Exception as e:
             print("GOOGLE ERROR:", str(e), flush=True)
-            asyncio.run_coroutine_threadsafe(self.send_error(str(e)), loop)
+            asyncio.run_coroutine_threadsafe(self.send_end(), loop)

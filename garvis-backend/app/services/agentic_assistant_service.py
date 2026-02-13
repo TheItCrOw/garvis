@@ -24,10 +24,11 @@ from typing import ClassVar, Optional, Annotated
 from fastapi import HTTPException, status
 
 
-#==================
+# ==================
 
 import hashlib
 from langchain_core.callbacks import BaseCallbackHandler
+
 
 def iter_image_urls(content):
     # Handles common multimodal shapes
@@ -43,6 +44,7 @@ def iter_image_urls(content):
                 elif isinstance(image_url, str):
                     yield image_url
 
+
 class AssertImageSent(BaseCallbackHandler):
     def __init__(self, *, raise_if_missing: bool = True):
         self.raise_if_missing = raise_if_missing
@@ -56,13 +58,17 @@ class AssertImageSent(BaseCallbackHandler):
                     if isinstance(url, str) and "base64," in url:
                         b64 = url.split("base64,", 1)[1]
                         h = hashlib.sha256(b64.encode("utf-8")).hexdigest()[:12]
-                        print(f"[probe] image data url detected, sha256[:12]={h}, b64_len={len(b64)}")
+                        print(
+                            f"[probe] image data url detected, sha256[:12]={h}, b64_len={len(b64)}"
+                        )
                         found = True
 
         if self.raise_if_missing and not found:
             raise RuntimeError("No base64 image block found in LLM input messages.")
 
-#==================
+
+# ==================
+
 
 class AgenticAssistantService:
     _ollama_lock: ClassVar[Lock] = Lock()
@@ -80,7 +86,7 @@ class AgenticAssistantService:
                         model=os.getenv("MEDGEMMA_TEXT_ONLY_MODEL_NAME"),
                         temperature=0,
                     )
-        return cls._ollama_client_with_image
+        return cls._ollama_client_pure_text
 
     @classmethod
     def get_ollama_with_image(cls) -> ChatOllama:
@@ -167,21 +173,21 @@ class AgenticAssistantService:
     def medgemma_reasoner_text(task: str) -> str:
         """
         This is the MEDGEMMA tool for pure text only. Use the Med Gemma model for medical-related inquiries, like asking what disease or ailment shows certain symptoms, or summarizing a medical image such as xray, CT-scan.
-        Or in cases where for certain situations, what is the first aid or certain diseases. Occasionally, you will also get medical images 
+        Or in cases where for certain situations, what is the first aid or certain diseases. Occasionally, you will also get medical images
         in base 64 format.
         """
-        config={}
+        config = {}
 
         resp = AgenticAssistantService.get_ollama_pure_text().invoke(
             [
                 SystemMessage(content=agent_constants.MEDGEMMA_TEXT_ONLY_MODEL_NAME),
                 HumanMessage(content=task),
-            ]
-            , config=config
+            ],
+            config=config,
         )
 
         return resp.content
-    
+
     @tool
     def medgemma_reasoner_image(
         task: str,
@@ -192,19 +198,19 @@ class AgenticAssistantService:
         This is the MEDGEMMA tool when submitting text with images. Use the Med Gemma model for medical-related inquiries and when analyzing medical images. Examples are like when asking what disease or ailment shows certain symptoms, or summarizing a medical image such as xray, CT-scan.
         Or in cases where for certain situations, what is the first aid or certain diseases.
         in base 64 format.
-        """        
+        """
         handler = AssertImageSent(raise_if_missing=True)
 
         content_parts = [{"type": "text", "text": task}]
 
-        if(image_b64):
+        if image_b64:
             mime = image_mime or "image/jpeg"
             content_parts.insert(
                 0,
                 {"type": "image_url", "image_url": f"data:{mime};base64,{image_b64}"},
             )
 
-        resp = AgenticAssistantService.get_ollama_with_image() .invoke(
+        resp = AgenticAssistantService.get_ollama_with_image().invoke(
             [
                 SystemMessage(content=agent_constants.MEDGEMMA_WITH_IMAGE_MODEL_PROMPT),
                 HumanMessage(content=content_parts),
@@ -222,7 +228,9 @@ class AgenticAssistantService:
             DuckDuckGoSearchRun(),
         ]
 
-        tools_collection.extend(AgenticAssistantService._data_service.return_tools())
+        tools_collection.extend(
+            AgenticAssistantService._data_service.return_agent_tools()
+        )
 
         return tools_collection
 
@@ -283,9 +291,9 @@ class AgenticAssistantService:
         builder.add_node("route_to_client_command", self._route_to_client_command)
         builder.add_edge("route_to_client_command", END)
 
-        compiled_graph =  builder.compile(checkpointer=checkpointer)
-        
-        if(persist_graph_visualization):
+        compiled_graph = builder.compile(checkpointer=checkpointer)
+
+        if persist_graph_visualization:
             png_bytes = compiled_graph.get_graph().draw_mermaid_png()
             with open("./app/services/graph_visualization/graph.png", "wb") as f:
                 f.write(png_bytes)
@@ -293,39 +301,47 @@ class AgenticAssistantService:
         return compiled_graph
 
     def _chat(
-        self, user_text: str
-        , image_path: Optional[str] = None
-        , thread_id: str = "demo"
-        , display_tool_call: bool = True
-        , image_b64: Optional[str] = None
+        self,
+        user_text: str,
+        image_path: Optional[str] = None,
+        thread_id: str = "demo",
+        display_tool_call: bool = True,
+        image_b64: Optional[str] = None,
     ) -> str:
-        
+
         image_mime = None
         cfg = {"configurable": {"thread_id": thread_id}}
 
         blocks = []
-        if(user_text.strip()):
+        if user_text.strip():
             blocks.append({"type": "text", "text": user_text.strip()})
 
-        if(image_b64):
+        if image_b64:
             validation_check = image_utils.detect_image_mime_pillow(image_b64)
 
-            if(not validation_check["is_image"]):
+            if not validation_check["is_image"]:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="base64 string is not an image, incomplete, or corrupted",
                 )
             else:
                 image_mime = validation_check["mime"]
-                blocks.append({"type": "image_url", "image_url": {"url": f"data:{image_mime};base64,{image_b64}"}})
+                blocks.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{image_mime};base64,{image_b64}"},
+                    }
+                )
 
-        if(image_path):
+        if image_path:
             image_mime, _ = mimetypes.guess_type(image_path)
 
             with open(image_path, "rb") as f:
                 raw_bytes = f.read()
 
-            if (image_mime in ("image/tiff", "image/x-tiff")) or image_path.lower().endswith((".tif", ".tiff")):
+            if (
+                image_mime in ("image/tiff", "image/x-tiff")
+            ) or image_path.lower().endswith((".tif", ".tiff")):
                 jpeg_bytes = image_utils.tiff_bytes_to_jpeg_bytes(raw_bytes)
                 image_b64 = base64.b64encode(jpeg_bytes).decode("utf-8")
                 image_mime = "image/jpeg"
@@ -333,7 +349,12 @@ class AgenticAssistantService:
                 image_b64 = base64.b64encode(raw_bytes).decode("utf-8")
                 image_mime = image_mime or "image/jpeg"
 
-            blocks.append({"type": "image_url", "image_url": {"url": f"data:{image_mime};base64,{image_b64}"}})
+            blocks.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{image_mime};base64,{image_b64}"},
+                }
+            )
 
         init_state = {
             "messages": [HumanMessage(content=blocks if blocks else user_text)],
@@ -342,7 +363,7 @@ class AgenticAssistantService:
             "parameters": {"id": "id"},
         }
 
-        final_state = self._graph.invoke(init_state,config=cfg)
+        final_state = self._graph.invoke(init_state, config=cfg)
 
         if display_tool_call:
             for msg in final_state["messages"]:
@@ -375,7 +396,7 @@ class AgenticAssistantService:
             image_path=garvis_task.uploaded_file_path,
             thread_id=garvis_task.session_id,
             display_tool_call=True,
-            image_b64=garvis_task.base64_image
+            image_b64=garvis_task.base64_image,
         )
 
         return GarvisReply(

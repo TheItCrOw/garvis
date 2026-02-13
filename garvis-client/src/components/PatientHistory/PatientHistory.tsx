@@ -4,7 +4,7 @@ import "./PatientHistory.css";
 import type { PatientHistory } from "../../models/dataModels";
 import { getPatientHistory } from "../../core/patients.api";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserDoctor } from "@fortawesome/free-solid-svg-icons";
+import { faIdBadge, faUserDoctor } from "@fortawesome/free-solid-svg-icons";
 import { capitalize } from "../../utils/stringUtils";
 import { buildXrayImageUrl } from "../../core/xrays.api";
 
@@ -199,12 +199,18 @@ export default function PatientHistoryPopup({
                     </div>
 
                     {h.xray_img_id && (
-                      <div className="xray-img">
-                        <img src={buildXrayImageUrl(h.xray_img_id)} />
+                      <div className="mt-3">
+                        <div className="xray-img">
+                          <img src={buildXrayImageUrl(h.xray_img_id)} />
+                        </div>
+                        <p className="mb-0 mt-1 xsmall text-secondary text-end w-100">
+                          <FontAwesomeIcon icon={faIdBadge} /> Image Id:{" "}
+                          {h.xray_img_id}
+                        </p>
                       </div>
                     )}
 
-                    <div className="row mt-3">
+                    <div className="row mt-2">
                       <div className="col-6">
                         <div className="ph-label">Complaint</div>
                         <div className="ph-value">

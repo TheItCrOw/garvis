@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { config } from "../config";
 import { useGarvisWsClient } from "./useGarvisWsClient";
 import logo from "./../assets/logo.png";
@@ -18,6 +19,7 @@ export default function GarvisButton({
     isRecording,
     error,
     transcripts,
+    garvisReply,
     wsIsConnected,
     garvisIsSpeaking,
     stopGarvisSpeech,
@@ -27,6 +29,21 @@ export default function GarvisButton({
     onGarvisInstruction: onGarvisInstruction,
     loggedInDoctorId: loggedInDoctorId,
   });
+
+  const [isReplyOpen, setIsReplyOpen] = useState(false);
+
+  const hasReply = useMemo(
+    () => wsIsConnected === true && !!garvisReply && garvisReply.trim() !== "",
+    [wsIsConnected, garvisReply],
+  );
+
+  // optional: close if reply disappears
+  // (keeps UI consistent if garvisReply is cleared elsewhere)
+  if (!hasReply && isReplyOpen) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    // (If you dislike this pattern, we can switch to useEffect.)
+    setIsReplyOpen(false);
+  }
 
   return (
     <div>
@@ -54,19 +71,54 @@ export default function GarvisButton({
             <img src={logo} alt="Garvis logo" width={50} />
           </button>
           {error && <div id="talk-garvis-error-msg">{error}</div>}
-          {/* {garvisIsSpeaking && (
-            <button
-              id="stop-garvis-speech-btn"
-              className="btn"
-              onClick={stopGarvisSpeech}
-            >
-              <FontAwesomeIcon icon={faStop} />
-            </button>
-          )} */}
         </div>
       ) : (
         ""
       )}
+      {/* Sticky reply preview -> expands fullscreen on tap */}
+      <div
+        id="garvis-reply-div"
+        className={isReplyOpen ? "open" : ""}
+        role="button"
+        tabIndex={0}
+        aria-expanded={isReplyOpen}
+        onClick={() => setIsReplyOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") setIsReplyOpen(true);
+          if (e.key === "Escape") setIsReplyOpen(false);
+        }}
+      >
+        <div className="garvis-reply-inner container">
+          <div className="garvis-reply-header">
+            <img src={logo} width={25} />
+            <span className="garvis-reply-title">Garvis</span>
+
+            <button
+              type="button"
+              className="garvis-reply-close"
+              aria-label="Close reply"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsReplyOpen(false);
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="garvis-reply-body">
+            {hasReply ? (
+              <p className="mb-0">{garvisReply}</p>
+            ) : (
+              <p>Just a moment...</p>
+            )}
+          </div>
+
+          {!isReplyOpen ? (
+            <div className="garvis-reply-hint">Tap to expand</div>
+          ) : null}
+        </div>
+      </div>
 
       {/* The dropdown which shows what's being transcribed and understood by Garvis */}
       {wsIsConnected == true ? (

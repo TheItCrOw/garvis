@@ -6,8 +6,11 @@ import { faUser } from "@fortawesome/free-solid-svg-icons";
 
 export default function Navbar() {
   return (
-    <nav className="navbar navbar-expand-lg bg-light">
-      <div className="container">
+    <nav
+      className="navbar navbar-expand-lg bg-light"
+      style={{ height: "85px" }}
+    >
+      {/* <div className="container">
         <NavLink className="navbar-brand fw-bold" to="/">
           <div className="d-flex align-items-center">
             <img src={logo} height={40} />
@@ -39,7 +42,7 @@ export default function Navbar() {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
     </nav>
   );
 }
