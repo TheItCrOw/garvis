@@ -4,7 +4,7 @@
 
 ### Google Cloud
 
-Since Garvis use services provided by the Google Cloud, you need to authenticate ourself to it and set a billing project. [Install the `gcloud`](https://docs.cloud.google.com/sdk/docs/install-sdk?hl=de) CLI in your system.
+Since Garvis uses services provided by the Google Cloud, you need to authenticate yourself to it and set a billing project. [Install the `gcloud`](https://docs.cloud.google.com/sdk/docs/install-sdk?hl=de) CLI in your system.
 
 ### Login
 
