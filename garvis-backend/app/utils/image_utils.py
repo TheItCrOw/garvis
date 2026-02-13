@@ -57,8 +57,8 @@ def detect_image_mime_pillow(b64: str):
     mime = Image.MIME.get(fmt)  # e.g. 'image/png'
     return {"is_image": True, "mime": mime, "format": fmt}
 
-def resize_and_compress_base64(b64, quality=67):
-    img_data = base64.b64decode(b64)
+def preprocess_image(b64, quality=67):
+    img_data = base64.b64decode(b64, validate=True)
     img = Image.open(BytesIO(img_data))
     width, height = img.size
 
@@ -68,6 +68,26 @@ def resize_and_compress_base64(b64, quality=67):
     buffer = BytesIO()
     img.save(buffer, format="JPEG", quality=quality, optimize=True) # [12]
     
+    return base64.b64encode(buffer.getvalue()).decode('utf-8')
+
+
+def jpg_b64_to_square_jpg_b64_black(
+    b64: str,
+    quality: int = 100
+) -> str:
+    img_data = base64.b64decode(b64, validate=True)
+    img = Image.open(BytesIO(img_data)).convert("RGB")
+
+    w, h = img.size
+    side = max(w, h)
+
+    # Create square black canvas and center the image on it
+    square = Image.new("RGB", (side, side), (0, 0, 0))
+    square.paste(img, ((side - w) // 2, (side - h) // 2))
+
+    buffer = BytesIO()
+    square.save(buffer, format="JPEG", quality=quality, optimize=True)
+
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
 def png_b64_to_jpg_b64_no_alpha(

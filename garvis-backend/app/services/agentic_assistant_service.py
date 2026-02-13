@@ -72,7 +72,9 @@ class AgenticAssistantService:
                     print("Instantiating Text MedGemma!")
                     cls._ollama_client_pure_text = ChatOllama(
                         model=os.getenv("MEDGEMMA_TEXT_ONLY_MODEL_NAME"),
+                        timeout = 30,
                         temperature=0,
+                        max_retries=2
                     )
         return cls._ollama_client_pure_text
 
@@ -84,7 +86,9 @@ class AgenticAssistantService:
                     print("Instantiating Vision MedGemma!")
                     cls._ollama_client_with_image = ChatOllama(
                         model=os.getenv("MEDGEMMA_WITH_IMAGE_MODEL_NAME"),
+                        timeout = 30,
                         temperature=0,
+                        max_retries=2
                     )
         return cls._ollama_client_with_image
 
@@ -98,23 +102,27 @@ class AgenticAssistantService:
             self._orchestrating_llm_with_tools = ChatGoogleGenerativeAI(
                 model=os.getenv("GEMINI_MODEL"),
                 temperature=0,
-                max_retries=1,
+                max_retries=2,
+                timeout = 60
             ).bind_tools(self.return_tools(), strict=True)
             self._llm_with_no_tools = ChatGoogleGenerativeAI(
                 model=os.getenv("GEMINI_MODEL"),
                 temperature=0,
-                max_retries=1,
+                max_retries=2,
+                timeout = 60
             )
         else:
             self._orchestrating_llm_with_tools = ChatOpenAI(
                 model=os.getenv("OPENAI_MODEL"),
                 temperature=0,
-                max_retries=1,
+                max_retries=2,
+                timeout = 60
             ).bind_tools(self.return_tools(), strict=True)
             self._llm_with_no_tools = ChatOpenAI(
                 model=os.getenv("OPENAI_MODEL"),
                 temperature=0,
-                max_retries=1,
+                max_retries=2,
+                timeout = 60
             )
 
     def __init__(self):
@@ -312,7 +320,10 @@ class AgenticAssistantService:
                     )
                 else:
                     image_mime = validation_check["mime"]
-                    blocks.append({"type": "image_url", "image_url": {"url": f"data:{image_mime};base64,{image_utils.resize_and_compress_base64(image_b64)}"}})
+
+                squared_image = image_utils.jpg_b64_to_square_jpg_b64_black(image_b64)
+                resized_and_lower_quality = image_utils.preprocess_image(squared_image)
+                blocks.append({"type": "image_url", "image_url": {"url": f"data:{image_mime};base64,{resized_and_lower_quality}"}})
 
             if(image_path):
                 image_mime, _ = mimetypes.guess_type(image_path)
@@ -331,12 +342,16 @@ class AgenticAssistantService:
                     image_b64 = base64.b64encode(raw_bytes).decode("utf-8")
                     image_mime = image_mime or "image/jpeg"
 
-                resized_and_lower_quality = image_utils.resize_and_compress_base64(image_b64)
+                squared_image = image_utils.jpg_b64_to_square_jpg_b64_black(image_b64)
+                resized_and_lower_quality = image_utils.preprocess_image(squared_image)
                 blocks.append({"type": "image_url", "image_url": {"url": f"data:{image_mime};base64,{resized_and_lower_quality}"}})
 
+
+            # the trick here is that when passing to the main orchestrating LLM, we use a lower quality and 
+            # but we will pass the squared_image version of the high quality image to the medgemma LLM
             init_state = {
                 "messages": [HumanMessage(content=blocks if blocks else user_text)],
-                "image_b64": image_b64 if image_b64 else None,
+                "image_b64": squared_image if image_b64 else None,
                 "image_mime": image_mime if image_mime else None,
                 "parameters": {"id": "id"},
             }
