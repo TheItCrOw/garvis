@@ -8,7 +8,10 @@ from datetime import date, datetime
 from typing import Generator, Literal, Optional, Any, Dict, List
 from langchain_core.tools import tool
 from zoneinfo import ZoneInfo
-
+from io import BytesIO
+from pathlib import Path
+import mimetypes
+from PIL import Image
 from app.core.models.database_models import (
     Patient,
     Doctor,
@@ -243,9 +246,15 @@ class DataService:
                 (patient_id,),
             )
 
-    def load_xray_image_bytes(self, xray_id: int) -> tuple[bytes, str]:
+    def load_xray_image_bytes(
+        self,
+        xray_id: int,
+        downsample: bool = False,
+    ) -> tuple[bytes, str]:
         """
         Given an xray_id, returns the bytes of the actual xray image.
+        If downsample=True, resizes the image to fit within 512x512
+        while preserving aspect ratio.
         Returns (bytes, mime).
         """
         xray = self.get_xray_by_id(xray_id)
@@ -254,7 +263,7 @@ class DataService:
 
         path = Path(xray["file_path"])
 
-        # For safety: ensure path stays inside my allowed base dir
+        # Security check
         base_dir = Path("data/xrays").resolve()
         resolved = path.resolve()
         if base_dir not in resolved.parents:
@@ -262,20 +271,32 @@ class DataService:
 
         data = path.read_bytes()
         mime, _ = mimetypes.guess_type(str(path))
-        return data, (mime or "application/octet-stream")
+        mime = mime or "application/octet-stream"
+
+        if not downsample or not mime.startswith("image/"):
+            return data, mime
+
+        # Downsample to max 512x512
+        with Image.open(BytesIO(data)) as img:
+            img.thumbnail((512, 512), Image.Resampling.LANCZOS)
+
+            buffer = BytesIO()
+
+            # Keep original format if possible
+            format_to_use = img.format or "PNG"
+            img.save(buffer, format=format_to_use)
+
+            return buffer.getvalue(), mime
 
     def load_xray_image_as_base64(
-        self,
-        xray_id: int,
-        *,
-        as_data_url: bool = False,
+        self, xray_id: int, *, as_data_url: bool = False, downsample: bool = False
     ) -> tuple[str, str]:
         """
         #TODO: Brando, you can probably use this as an Agent Tool.
         Based on a xray id, returns (base64_string, mime) where base64_string is the encoded xray image.
         If as_data_url=True, base64_string is a full data URL usable directly in <img src="...">.
         """
-        data, mime = self.load_xray_image_bytes(xray_id)
+        data, mime = self.load_xray_image_bytes(xray_id, downsample=downsample)
         b64 = base64.b64encode(data).decode("ascii")
 
         if as_data_url:
@@ -779,7 +800,9 @@ class DataService:
             If as_data_url=True, base64_string is a full data URL usable in <img src="...">.
             Only invoke when explicitly instructed.
             """
-            return self.load_xray_image_as_base64(xray_id, as_data_url=as_data_url)
+            return self.load_xray_image_as_base64(
+                xray_id, as_data_url=as_data_url, downsample=True
+            )
 
         @tool
         def all_patient_xray_images_as_base64(

@@ -31,7 +31,7 @@ def get_xray_image(xray_id: int):
 @router.get("/xrays/{xray_id}/garvis_analyze")
 async def analyze_xray_image(xray_id: int, session_id: str | None = None):
     try:
-        data, mime = data_service.load_xray_image_as_base64(xray_id)
+        data, mime = data_service.load_xray_image_as_base64(xray_id, downsample=True)
     except KeyError:
         raise HTTPException(status_code=404, detail="XRAY not found")
     except FileNotFoundError:
