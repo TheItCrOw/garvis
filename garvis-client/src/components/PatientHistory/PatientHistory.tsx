@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faIdBadge, faUserDoctor } from "@fortawesome/free-solid-svg-icons";
 import { capitalize } from "../../utils/stringUtils";
 import { buildXrayImageUrl } from "../../core/xrays.api";
+import logo from "./../../assets/logo.png";
 
 type PatientHistoryPopupProps = {
   isOpen: boolean;
@@ -14,6 +15,7 @@ type PatientHistoryPopupProps = {
   history?: PatientHistory[] | null;
   patient_id?: number | null;
   className?: string;
+  onAnalyzeXrayImg: (xrayId: number) => void;
 };
 
 export default function PatientHistoryPopup({
@@ -22,6 +24,7 @@ export default function PatientHistoryPopup({
   history,
   patient_id,
   className,
+  onAnalyzeXrayImg,
 }: PatientHistoryPopupProps) {
   const [fetchedHistory, setFetchedHistory] = useState<PatientHistory[] | null>(
     null,
@@ -202,6 +205,14 @@ export default function PatientHistoryPopup({
                       <div className="mt-3">
                         <div className="xray-img">
                           <img src={buildXrayImageUrl(h.xray_img_id)} />
+                          <button
+                            className="garvis-analyze btn"
+                            onClick={() =>
+                              onAnalyzeXrayImg(h.xray_img_id ?? -1)
+                            }
+                          >
+                            <img src={logo} />
+                          </button>
                         </div>
                         <p className="mb-0 mt-1 xsmall text-secondary text-end w-100">
                           <FontAwesomeIcon icon={faIdBadge} /> Image Id:{" "}

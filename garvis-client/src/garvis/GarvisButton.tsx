@@ -1,17 +1,20 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { config } from "../config";
 import { useGarvisWsClient } from "./useGarvisWsClient";
 import logo from "./../assets/logo.png";
 import type { GarvisInstruction } from "../models/websocket/messages";
+import { analyzeXrayImgById } from "../core/xrays.api";
 
 type GarvisButtonProps = {
   onGarvisInstruction: (instruction: GarvisInstruction) => void;
   loggedInDoctorId: number;
+  analyzableXrayImg: number;
 };
 
 export default function GarvisButton({
   onGarvisInstruction,
   loggedInDoctorId,
+  analyzableXrayImg,
 }: GarvisButtonProps) {
   const {
     startRecording,
@@ -28,6 +31,7 @@ export default function GarvisButton({
     wsUrl: config.backendWsUrl,
     onGarvisInstruction: onGarvisInstruction,
     loggedInDoctorId: loggedInDoctorId,
+    analyzableXrayImgId: analyzableXrayImg,
   });
 
   const [isReplyOpen, setIsReplyOpen] = useState(false);

@@ -20,6 +20,7 @@ function App() {
   const [garvisInstruction, setGarvisInstruction] =
     useState<GarvisInstruction | null>(null);
   const [loggedInDoctorId, setLoggedInDoctorId] = useState(-1);
+  const [analyzableXrayImg, setAnalyzableXrayImg] = useState<number>(-1);
 
   const enterApp = async (doctorId: number) => {
     setLoggedInDoctorId(doctorId);
@@ -38,6 +39,7 @@ function App() {
               <Home
                 garvisInstruction={garvisInstruction}
                 loggedInDoctorId={loggedInDoctorId}
+                onAnalyzeXrayImg={(xrayId) => setAnalyzableXrayImg(xrayId)}
               />
             }
           />
@@ -53,6 +55,7 @@ function App() {
           onGarvisInstruction={(instruction) =>
             setGarvisInstruction(instruction)
           }
+          analyzableXrayImg={analyzableXrayImg}
         />
       )}
 

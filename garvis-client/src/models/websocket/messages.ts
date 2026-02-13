@@ -91,6 +91,7 @@ export interface WsLoginContent {
 
 export interface WsAckContent {
     message: string;
+    type: string;
 }
 
 export interface WsTranscriptContent {

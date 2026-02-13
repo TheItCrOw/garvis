@@ -111,6 +111,7 @@
 .ph-card .xray-img {
   width: 100%;
   display: flex;
+  position: relative;
   align-items: center;
   justify-content: center;
   text-align: center;
@@ -119,6 +120,22 @@
 .ph-card .xray-img img {
   max-width: 1000px;
   width: 100%;
+}
+
+.ph-card .xray-img .garvis-analyze {
+  position: absolute;
+  background-color: ghostwhite !important;
+  box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+  border-radius: 50%;
+  top: -12px;
+  right: -6px;
+  width: 40px;
+  padding: 6px;
+  border: lightgray 1px solid;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ph-event-type {

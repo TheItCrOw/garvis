@@ -21,6 +21,7 @@ type PatientFileProps = {
   historyIsOpen?: boolean;
   onHistoryOpen?: () => void;
   onHistoryClose?: () => void;
+  onAnalyzeXrayImg: (xrayId: number) => void;
 
   className?: string;
 };
@@ -33,6 +34,7 @@ export default function PatientFile({
   historyIsOpen,
   onHistoryOpen,
   onHistoryClose,
+  onAnalyzeXrayImg,
   className,
 }: PatientFileProps) {
   const [fetchedPatient, setFetchedPatient] = useState<Patient | null>(null);
@@ -143,6 +145,7 @@ export default function PatientFile({
         isOpen={historyOpen}
         patient_id={data?.patient_id ?? patient_id ?? null}
         onClose={closeHistory}
+        onAnalyzeXrayImg={onAnalyzeXrayImg}
       />
 
       {/* The actual file */}

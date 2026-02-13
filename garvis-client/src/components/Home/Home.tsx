@@ -14,11 +14,13 @@ import logo from "./../../assets/logo.png";
 type HomeProps = {
   garvisInstruction: GarvisInstruction | null;
   loggedInDoctorId: number;
+  onAnalyzeXrayImg(xrayId: number): void;
 };
 
 export default function Home({
   garvisInstruction,
   loggedInDoctorId,
+  onAnalyzeXrayImg,
 }: HomeProps) {
   const [entries, setEntries] = useState<CalendarEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -154,6 +156,7 @@ export default function Home({
             setHistoryOpen(false); // optional but recommended
           }}
           historyIsOpen={historyOpen}
+          onAnalyzeXrayImg={onAnalyzeXrayImg}
           onHistoryOpen={() => setHistoryOpen(true)}
           onHistoryClose={() => setHistoryOpen(false)}
         />

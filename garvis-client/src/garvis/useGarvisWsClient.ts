@@ -1,16 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GarvisWsClient } from "./GarvisWsClient";
-import { createWsStartRecordingContent, GarvisOpenView, type GarvisInstruction } from "../models/websocket/messages";
-import { playB64Audio, stopCurrentAudio } from "./audioUtils"
+import { createWsStartRecordingContent, GarvisOpenView, type GarvisInstruction, type WsAckContent, type WsGarvisContent, type WsMessage } from "../models/websocket/messages";
+import { playB64Audio, stopCurrentAudio } from "./audioUtils";
+import { analyzeXrayImgById } from "../core/xrays.api";
 
 type UseGarvisWsClientOptions = {
     wsUrl: string;
     onGarvisInstruction: (instruction: GarvisInstruction) => void;
-    loggedInDoctorId: number
+    loggedInDoctorId: number;
+    analyzableXrayImgId: number;
 };
 
-export function useGarvisWsClient({ wsUrl, onGarvisInstruction, loggedInDoctorId }: UseGarvisWsClientOptions) {
+export function useGarvisWsClient({ wsUrl, onGarvisInstruction, loggedInDoctorId, analyzableXrayImgId }: UseGarvisWsClientOptions) {
     const [isRecording, setIsRecording] = useState(false);
     const [garvisIsSpeaking, setGarvisIsSpeaking] = useState(false);
     const [garvisIsThinking, setGarvisIsThinking] = useState(false);
@@ -18,6 +20,7 @@ export function useGarvisWsClient({ wsUrl, onGarvisInstruction, loggedInDoctorId
     const [error, setError] = useState<string | null>(null);
     const [transcripts, setTranscripts] = useState<string[]>([]);
     const [garvisReply, setGarvisReply] = useState<string>("");
+    const [sessionId, setSessionId] = useState<string>();
 
     const didInitRef = useRef(false);
     const clientRef = useRef<GarvisWsClient | null>(null);
@@ -32,11 +35,47 @@ export function useGarvisWsClient({ wsUrl, onGarvisInstruction, loggedInDoctorId
         setGarvisIsSpeaking(false);
     }, []);
 
+    const handleGarvisReply = useCallback((m: WsGarvisContent) => {
+        console.log(`[GARVIS] ${m.intent}: ${m.answer}`);
+        stopCurrentAudio();
+        setGarvisIsThinking(false);
+        setGarvisReply(m.answer);
+
+        if (m.open_view !== undefined && m.open_view !== "") {
+            const view = m.open_view as string;
+            if (Object.values(GarvisOpenView).includes(view as GarvisOpenView)) {
+                const open_view = view as GarvisOpenView;
+                onGarvisInstruction({
+                    open_view,
+                    parameters: m.parameters as any,
+                });
+            }
+        }
+
+        if (m.audio_base64 && m.audio_mime_type) {
+            playB64Audio(m.audio_base64, m.audio_mime_type, {
+                onSpeakingChange: setGarvisIsSpeaking,
+            }).catch((e) => {
+                console.warn("Audio play failed:", e);
+                setGarvisIsSpeaking(false);
+            });
+        } else {
+            setGarvisIsSpeaking(false);
+        }
+    }, [onGarvisInstruction]);
+
+
     const setupClientHandlersOnce = useCallback((client: GarvisWsClient) => {
         client.onError((m) => setError(m.content.message));
 
         client.onEnd(() => {
             setIsRecording(false);
+        });
+
+        client.onAck((ack: WsMessage<WsAckContent>) => {
+            if (ack.content.type == "login") {
+                setSessionId(ack.content.message);
+            }
         });
 
         client.onTranscript((m) => {
@@ -46,40 +85,7 @@ export function useGarvisWsClient({ wsUrl, onGarvisInstruction, loggedInDoctorId
         });
 
         client.onGarvis((m) => {
-            console.log(`[GARVIS] ${m.content.intent}: ${m.content.answer}`);
-            // Stop any speech that is currently playing
-            stopCurrentAudio();
-            setGarvisIsThinking(false);
-            setGarvisReply(m.content.answer);
-
-            // If Garvis tells us to open a view or apply an action, check it and execute it
-            if (m.content.open_view !== undefined && m.content.open_view !== "") {
-                const view = m.content.open_view as string;
-                if (Object.values(GarvisOpenView).includes(view as GarvisOpenView)) {
-                    console.log(`Received instructions from Garvis: 
-                    open_view=${m.content.open_view}; 
-                    action=${m.content.action}; 
-                    parameters=${JSON.stringify(m.content.parameters)}`);
-
-                    const open_view = view as GarvisOpenView;
-                    onGarvisInstruction({
-                        open_view,
-                        parameters: m.content.parameters as any,
-                    });
-                }
-            }
-
-            // Make the new message speak
-            if (m.content.audio_base64 && m.content.audio_mime_type) {
-                playB64Audio(m.content.audio_base64, m.content.audio_mime_type, {
-                    onSpeakingChange: setGarvisIsSpeaking,
-                }).catch((e) => {
-                    console.warn("Audio play failed:", e);
-                    setGarvisIsSpeaking(false);
-                });
-            } else {
-                setGarvisIsSpeaking(false);
-            }
+            handleGarvisReply(m.content);
         });
 
         client.onRawMessage((msg) => {
@@ -142,6 +148,34 @@ export function useGarvisWsClient({ wsUrl, onGarvisInstruction, loggedInDoctorId
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    useEffect(() => {
+        if (!wsIsConnected) return;
+        if (!sessionId) return;
+        if (!analyzableXrayImgId || analyzableXrayImgId <= 0) return;
+
+        let cancelled = false;
+
+        (async () => {
+            try {
+                setGarvisIsThinking(true);
+
+                const content = await analyzeXrayImgById(analyzableXrayImgId, sessionId);
+                if (cancelled) return;
+
+                handleGarvisReply(content);
+            } catch (e: any) {
+                if (cancelled) return;
+                setError(e?.message ?? "Failed to analyze XRAY");
+                setGarvisIsThinking(false);
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [analyzableXrayImgId, sessionId, wsIsConnected, handleGarvisReply]);
+
 
     const cleanup = useCallback(async () => {
         try {

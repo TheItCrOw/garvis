@@ -79,8 +79,8 @@ class GarvisWebsocketSession:
             return
         await self.ws.send_text(json.dumps(msg.to_json()))
 
-    async def send_ack(self, text: str):
-        await self.send(WsMessage.create(WsMessageType.ACK, WsAckContent(text)))
+    async def send_ack(self, text: str, type: str = ""):
+        await self.send(WsMessage.create(WsMessageType.ACK, WsAckContent(text, type)))
 
     async def send_error(self, text: str):
         await self.send(WsMessage.create(WsMessageType.ERROR, WsErrorContent(text)))
@@ -160,6 +160,9 @@ class GarvisWebsocketSession:
         asyncio.create_task(
             self.garvis.handle_task(GarvisTask(session_id=self.session_id, query=text))
         )
+        await self.send_ack(
+            self.session_id, "login"
+        )  # Acknowledge the login and send the sessionId
         audio_b64, mime = await asyncio.to_thread(
             self.tts_service.synthesize_speech_mp3_b64,
             welcome,

@@ -115,6 +115,7 @@ class WsLoginContent:
 @dataclass
 class WsAckContent:
     message: str
+    type: str = ""
 
 
 @dataclass
