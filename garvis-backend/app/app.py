@@ -39,6 +39,7 @@ print(f"LLM Flavor: {os.getenv("LLM_FLAVOR")}")
 
 garvis = get_garvis()
 
+
 @app.get("/")
 def root():
     return {"name": "garvis-backend", "status": "ok"}
@@ -46,7 +47,9 @@ def root():
 
 @app.post("/invoke_agent/")
 async def invoke_agent(item: GarvisQuery):
-    task = GarvisTask(session_id=item.session_id, query=item.query, base64_image=item.base64_image)
+    task = GarvisTask(
+        session_id=item.session_id, query=item.query, base64_image=item.base64_image
+    )
     reply = await garvis.handle_task(task)
     return {
         "message": "Item created successfully",
@@ -57,6 +60,7 @@ async def invoke_agent(item: GarvisQuery):
         "parameters": reply.parameters,
         "intent_confidence": reply.intent_confidence,
     }
+
 
 @app.post("/invoke_agent_with_file/")
 async def invoke_agent_with_file(
@@ -73,10 +77,10 @@ async def invoke_agent_with_file(
         shutil.copyfileobj(uploaded_file.file, temp_file)
         temp_file_path = temp_file.name
 
-    task = GarvisTask(session_id=item.session_id
-                      , query=item.query
-                      , uploaded_file_path=temp_file_path)
-    
+    task = GarvisTask(
+        session_id=item.session_id, query=item.query, uploaded_file_path=temp_file_path
+    )
+
     reply = await garvis.handle_task(task)
 
     return {

@@ -104,7 +104,7 @@ class WsStopRecordingContent:
 class WsLoginContent:
 
     @classmethod
-    def from_json(cls, data: Dict[str, Any]) -> "WsStartRecordingContent":
+    def from_json(cls, data: Dict[str, Any]) -> "WsLoginContent":
         return cls(
             doctor_id=int(data["doctor_id"]),
         )
