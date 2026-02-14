@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { config } from "../config";
 import { useGarvisWsClient } from "./useGarvisWsClient";
 import logo from "./../assets/logo.png";
 import type { GarvisInstruction } from "../models/websocket/messages";
-import { analyzeXrayImgById } from "../core/xrays.api";
 
 type GarvisButtonProps = {
   onGarvisInstruction: (instruction: GarvisInstruction) => void;
@@ -41,11 +40,7 @@ export default function GarvisButton({
     [wsIsConnected, garvisReply],
   );
 
-  // optional: close if reply disappears
-  // (keeps UI consistent if garvisReply is cleared elsewhere)
   if (!hasReply && isReplyOpen) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    // (If you dislike this pattern, we can switch to useEffect.)
     setIsReplyOpen(false);
   }
 
@@ -74,7 +69,7 @@ export default function GarvisButton({
           >
             <img src={logo} alt="Garvis logo" width={50} />
           </button>
-          {error && <div id="talk-garvis-error-msg">{error}</div>}
+          {/* {error && <div id="talk-garvis-error-msg">{error}</div>} */}
         </div>
       ) : (
         ""

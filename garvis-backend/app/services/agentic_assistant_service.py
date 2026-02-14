@@ -23,6 +23,7 @@ from typing import ClassVar, Optional, Annotated
 from fastapi import HTTPException, status
 from app.utils.agent_utils import AssertImageSent
 
+
 class AgenticAssistantService:
     _ollama_lock: ClassVar[Lock] = Lock()
     _ollama_client_pure_text: ClassVar[Optional[ChatOllama]] = None
@@ -35,7 +36,9 @@ class AgenticAssistantService:
             with cls._ollama_lock:
                 if cls._ollama_client_pure_text is None:
                     print("Instantiating Text MedGemma!")
-                    cls._ollama_client_pure_text = llm_utils.instantiate_ollama_llm(model_name=os.getenv("MEDGEMMA_TEXT_ONLY_MODEL_NAME"))
+                    cls._ollama_client_pure_text = llm_utils.instantiate_ollama_llm(
+                        model_name=os.getenv("MEDGEMMA_TEXT_ONLY_MODEL_NAME")
+                    )
         return cls._ollama_client_pure_text
 
     @classmethod
@@ -44,7 +47,9 @@ class AgenticAssistantService:
             with cls._ollama_lock:
                 if cls._ollama_client_with_image is None:
                     print("Instantiating Vision MedGemma!")
-                    cls._ollama_client_with_image = llm_utils.instantiate_ollama_llm(model_name=os.getenv("MEDGEMMA_WITH_IMAGE_MODEL_NAME"))
+                    cls._ollama_client_with_image = llm_utils.instantiate_ollama_llm(
+                        model_name=os.getenv("MEDGEMMA_WITH_IMAGE_MODEL_NAME")
+                    )
         return cls._ollama_client_with_image
 
     @classmethod
@@ -54,13 +59,19 @@ class AgenticAssistantService:
     def _initialize_orchestrating_llms(self):
         self._llm_flavor = os.getenv("LLM_FLAVOR")
         if self._llm_flavor == "GOOGLE":
-            self._orchestrating_llm_with_tools = llm_utils.instantiate_google_llm(model_name=os.getenv("GEMINI_MODEL"))\
-                                                .bind_tools(self.return_tools(), strict=True)
-            self._llm_with_no_tools = llm_utils.instantiate_google_llm(model_name=os.getenv("GEMINI_MODEL"))
+            self._orchestrating_llm_with_tools = llm_utils.instantiate_google_llm(
+                model_name=os.getenv("GEMINI_MODEL")
+            ).bind_tools(self.return_tools(), strict=True)
+            self._llm_with_no_tools = llm_utils.instantiate_google_llm(
+                model_name=os.getenv("GEMINI_MODEL")
+            )
         else:
-            self._orchestrating_llm_with_tools = llm_utils.instantiate_openai_llm(model_name=os.getenv("OPENAI_MODEL"))\
-                                                .bind_tools(self.return_tools(), strict=True)
-            self._llm_with_no_tools = llm_utils.instantiate_openai_llm(model_name=os.getenv("OPENAI_MODEL"))
+            self._orchestrating_llm_with_tools = llm_utils.instantiate_openai_llm(
+                model_name=os.getenv("OPENAI_MODEL")
+            ).bind_tools(self.return_tools(), strict=True)
+            self._llm_with_no_tools = llm_utils.instantiate_openai_llm(
+                model_name=os.getenv("OPENAI_MODEL")
+            )
 
     def __init__(self):
         self.ollama_pure_text = AgenticAssistantService.get_ollama_pure_text()
@@ -104,18 +115,18 @@ class AgenticAssistantService:
         This is the MEDGEMMA tool for pure text only. Use the Med Gemma model for medical-related inquiries, like asking what disease or ailment shows certain symptoms.
         Or in cases where for certain situations, what is the first aid or certain diseases.
         """
-        config={}
+        config = {}
 
         resp = AgenticAssistantService.get_ollama_pure_text().invoke(
             [
                 SystemMessage(content=agent_constants.MEDGEMMA_TEXT_ONLY_MODEL_NAME),
                 HumanMessage(content=task),
-            ]
-            , config=config
+            ],
+            config=config,
         )
 
         return resp.content
-    
+
     @tool
     def medgemma_reasoner_image(
         task: str,
@@ -125,12 +136,12 @@ class AgenticAssistantService:
         """
         This is the MEDGEMMA tool when submitting text with images. Use the Med Gemma model for medical-related inquiries and when analyzing medical images.
         Examples are like when asking what disease or ailment shows certain symptoms, or summarizing a medical image such as xray, CT-scan in base 64 format.
-        """        
+        """
         handler = AssertImageSent(raise_if_missing=True)
 
         content_parts = [{"type": "text", "text": task}]
 
-        if(image_b64):
+        if image_b64:
             mime = image_mime or "image/jpeg"
             content_parts.insert(
                 0,
@@ -164,8 +175,8 @@ class AgenticAssistantService:
     def _assistant_node(self, state: AgentState) -> AgentState:
         handler = AssertImageSent(raise_if_missing=True)
         response = self._orchestrating_llm_with_tools.invoke(
-            [SystemMessage(content=agent_constants.SYSTEM_PROMPT)] + state["messages"]
-            ,config={"callbacks": [handler]},
+            [SystemMessage(content=agent_constants.SYSTEM_PROMPT)] + state["messages"],
+            config={"callbacks": [handler]},
         )
         state["messages"] = state["messages"] + [response]
         return state
@@ -242,13 +253,13 @@ class AgenticAssistantService:
             cfg = {"configurable": {"thread_id": thread_id}}
 
             blocks = []
-            if(user_text.strip()):
+            if user_text.strip():
                 blocks.append({"type": "text", "text": user_text.strip()})
 
-            if(image_b64):
+            if image_b64:
                 validation_check = image_utils.detect_image_mime_pillow(image_b64)
 
-                if(not validation_check["is_image"]):
+                if not validation_check["is_image"]:
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                         detail="base64 string is not an image, incomplete, or corrupted",
@@ -258,19 +269,28 @@ class AgenticAssistantService:
 
                 squared_image = image_utils.jpg_b64_to_square_jpg_b64_black(image_b64)
                 resized_and_lower_quality = image_utils.preprocess_image(squared_image)
-                blocks.append({"type": "image_url", "image_url": {"url": f"data:{image_mime};base64,{resized_and_lower_quality}"}})
+                blocks.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{image_mime};base64,{resized_and_lower_quality}"
+                        },
+                    }
+                )
 
-            if(image_path):
+            if image_path:
                 image_mime, _ = mimetypes.guess_type(image_path)
 
                 with open(image_path, "rb") as f:
                     raw_bytes = f.read()
 
-                if (image_mime in ("image/tiff", "image/x-tiff")) or image_path.lower().endswith((".tif", ".tiff")):
+                if (
+                    image_mime in ("image/tiff", "image/x-tiff")
+                ) or image_path.lower().endswith((".tif", ".tiff")):
                     jpeg_bytes = image_utils.tiff_bytes_to_jpeg_bytes(raw_bytes)
                     image_b64 = base64.b64encode(jpeg_bytes).decode("utf-8")
                     image_mime = "image/jpeg"
-                elif(image_mime in ("image/png")):
+                elif image_mime in ("image/png"):
                     image_b64 = image_utils.png_b64_to_jpg_b64_no_alpha(raw_bytes)
                     image_mime = "image/jpeg"
                 else:
@@ -279,8 +299,14 @@ class AgenticAssistantService:
 
                 squared_image = image_utils.jpg_b64_to_square_jpg_b64_black(image_b64)
                 resized_and_lower_quality = image_utils.preprocess_image(squared_image)
-                blocks.append({"type": "image_url", "image_url": {"url": f"data:{image_mime};base64,{resized_and_lower_quality}"}})
-
+                blocks.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{image_mime};base64,{resized_and_lower_quality}"
+                        },
+                    }
+                )
 
             # the trick here is that when passing to the main orchestrating LLM, we use a lower quality and lower resolution
             # but we will pass the squared_image version of the high quality image to the medgemma LLM
@@ -291,7 +317,7 @@ class AgenticAssistantService:
                 "parameters": {"id": "id"},
             }
 
-            final_state = self._graph.invoke(init_state,config=cfg)
+            final_state = self._graph.invoke(init_state, config=cfg)
 
             if display_tool_call:
                 for msg in final_state["messages"]:
@@ -319,9 +345,9 @@ class AgenticAssistantService:
         except Exception as ex:
             print(ex)
             raise HTTPException(
-                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                 detail=f"sorry, error",
-             )
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"sorry, error",
+            )
 
     def call_agent(self, garvis_task: GarvisTask) -> GarvisReply:
 
@@ -330,7 +356,7 @@ class AgenticAssistantService:
             image_path=garvis_task.uploaded_file_path,
             thread_id=garvis_task.session_id,
             display_tool_call=True,
-            image_b64=garvis_task.base64_image
+            image_b64=garvis_task.base64_image,
         )
 
         return GarvisReply(

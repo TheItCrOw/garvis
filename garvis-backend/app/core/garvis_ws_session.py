@@ -148,8 +148,9 @@ class GarvisWebsocketSession:
         now = datetime.now()
         day = get_day_info(now)
         hour = now.strftime("%I").lstrip("0")
+        minutes = now.time().minute
         am_pm = now.strftime("%p").lower()
-        welcome = f"Welcome {doctor.first_name}, it's {day.weekday} the {day.day} of {day.month}, {hour} o'clock {am_pm}."
+        welcome = f"Welcome {doctor.first_name}, it's {day.weekday} the {day.day} of {day.month}, {hour}:{minutes} o'clock {am_pm}."
         text = f"""
         Doctor {doctor.first_name} {doctor.last_name} (specialized in {doctor.specialty}) with id {doctor.doctor_id} just logged in.
         The current datetime is: {str(datetime.now())} and you'll be the doctor's assistant for today.
