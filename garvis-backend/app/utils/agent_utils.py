@@ -5,8 +5,9 @@ import hashlib
 from langchain_core.callbacks import BaseCallbackHandler
 
 class AssertImageSent(BaseCallbackHandler):
-    def __init__(self, *, raise_if_missing: bool = True):
+    def __init__(self, *, caller,raise_if_missing: bool = True):
         self.raise_if_missing = raise_if_missing
+        self.caller=caller
 
     def on_chat_model_start(self, serialized, messages, **kwargs):
         found = False
@@ -17,7 +18,7 @@ class AssertImageSent(BaseCallbackHandler):
                     if isinstance(url, str) and "base64," in url:
                         b64 = url.split("base64,", 1)[1]
                         h = hashlib.sha256(b64.encode("utf-8")).hexdigest()[:12]
-                        print(f"[probe] image data url detected, sha256[:12]={h}, b64_len={len(b64)}")
+                        print(f"{self.caller}| [probe] image data url detected, sha256[:12]={h}, b64_len={len(b64)}")
                         found = True
 
         if self.raise_if_missing and not found:

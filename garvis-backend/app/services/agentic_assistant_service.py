@@ -137,7 +137,7 @@ class AgenticAssistantService:
         This is the MEDGEMMA tool when submitting text with images. Use the Med Gemma model for medical-related inquiries and when analyzing medical images.
         Examples are like when asking what disease or ailment shows certain symptoms, or summarizing a medical image such as xray, CT-scan in base 64 format.
         """
-        handler = AssertImageSent(raise_if_missing=True)
+        handler = AssertImageSent(caller="medgemma",raise_if_missing=True)
 
         content_parts = [{"type": "text", "text": task}]
 
@@ -173,7 +173,7 @@ class AgenticAssistantService:
         return tools_collection
 
     def _assistant_node(self, state: AgentState) -> AgentState:
-        handler = AssertImageSent(raise_if_missing=True)
+        handler = AssertImageSent(caller="orchestrating_llm",raise_if_missing=True)
         response = self._orchestrating_llm_with_tools.invoke(
             [SystemMessage(content=agent_constants.SYSTEM_PROMPT)] + state["messages"],
             config={"callbacks": [handler]},
