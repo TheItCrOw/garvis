@@ -8,6 +8,7 @@ from app.core.dto.agent_state import AgentState
 from app.core.dto.garvis_dtos import GarvisReply, GarvisTask
 from app.database.duckdb_data_service import DataService
 import app.utils.image_utils as image_utils
+import app.utils.llm_utils as llm_utils
 
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_community.tools import DuckDuckGoSearchRun
@@ -15,9 +16,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
 from langchain.tools import InjectedState  # per docs
 from threading import Lock
 from typing import ClassVar, Optional, Annotated
@@ -36,12 +35,7 @@ class AgenticAssistantService:
             with cls._ollama_lock:
                 if cls._ollama_client_pure_text is None:
                     print("Instantiating Text MedGemma!")
-                    cls._ollama_client_pure_text = ChatOllama(
-                        model=os.getenv("MEDGEMMA_TEXT_ONLY_MODEL_NAME"),
-                        timeout = 30,
-                        temperature=0,
-                        max_retries=2
-                    )
+                    cls._ollama_client_pure_text = llm_utils.instantiate_ollama_llm(model_name=os.getenv("MEDGEMMA_TEXT_ONLY_MODEL_NAME"))
         return cls._ollama_client_pure_text
 
     @classmethod
@@ -50,12 +44,7 @@ class AgenticAssistantService:
             with cls._ollama_lock:
                 if cls._ollama_client_with_image is None:
                     print("Instantiating Vision MedGemma!")
-                    cls._ollama_client_with_image = ChatOllama(
-                        model=os.getenv("MEDGEMMA_WITH_IMAGE_MODEL_NAME"),
-                        timeout = 30,
-                        temperature=0,
-                        max_retries=2
-                    )
+                    cls._ollama_client_with_image = llm_utils.instantiate_ollama_llm(model_name=os.getenv("MEDGEMMA_WITH_IMAGE_MODEL_NAME"))
         return cls._ollama_client_with_image
 
     @classmethod
@@ -65,31 +54,13 @@ class AgenticAssistantService:
     def _initialize_orchestrating_llms(self):
         self._llm_flavor = os.getenv("LLM_FLAVOR")
         if self._llm_flavor == "GOOGLE":
-            self._orchestrating_llm_with_tools = ChatGoogleGenerativeAI(
-                model=os.getenv("GEMINI_MODEL"),
-                temperature=0,
-                max_retries=2,
-                timeout = 60
-            ).bind_tools(self.return_tools(), strict=True)
-            self._llm_with_no_tools = ChatGoogleGenerativeAI(
-                model=os.getenv("GEMINI_MODEL"),
-                temperature=0,
-                max_retries=2,
-                timeout = 60
-            )
+            self._orchestrating_llm_with_tools = llm_utils.instantiate_google_llm(model_name=os.getenv("GEMINI_MODEL"))\
+                                                .bind_tools(self.return_tools(), strict=True)
+            self._llm_with_no_tools = llm_utils.instantiate_google_llm(model_name=os.getenv("GEMINI_MODEL"))
         else:
-            self._orchestrating_llm_with_tools = ChatOpenAI(
-                model=os.getenv("OPENAI_MODEL"),
-                temperature=0,
-                max_retries=2,
-                timeout = 60
-            ).bind_tools(self.return_tools(), strict=True)
-            self._llm_with_no_tools = ChatOpenAI(
-                model=os.getenv("OPENAI_MODEL"),
-                temperature=0,
-                max_retries=2,
-                timeout = 60
-            )
+            self._orchestrating_llm_with_tools = llm_utils.instantiate_openai_llm(model_name=os.getenv("OPENAI_MODEL"))\
+                                                .bind_tools(self.return_tools(), strict=True)
+            self._llm_with_no_tools = llm_utils.instantiate_openai_llm(model_name=os.getenv("OPENAI_MODEL"))
 
     def __init__(self):
         self.ollama_pure_text = AgenticAssistantService.get_ollama_pure_text()
@@ -131,8 +102,7 @@ class AgenticAssistantService:
     def medgemma_reasoner_text(task: str) -> str:
         """
         This is the MEDGEMMA tool for pure text only. Use the Med Gemma model for medical-related inquiries, like asking what disease or ailment shows certain symptoms.
-        Or in cases where for certain situations, what is the first aid or certain diseases. Occasionally, you will also get medical images 
-        in base 64 format.
+        Or in cases where for certain situations, what is the first aid or certain diseases.
         """
         config={}
 
@@ -154,9 +124,7 @@ class AgenticAssistantService:
     ) -> str:
         """
         This is the MEDGEMMA tool when submitting text with images. Use the Med Gemma model for medical-related inquiries and when analyzing medical images.
-        Examples are like when asking what disease or ailment shows certain symptoms, or summarizing a medical image such as xray, CT-scan.
-        Or in cases where for certain situations, what is the first aid or certain diseases.
-        in base 64 format.
+        Examples are like when asking what disease or ailment shows certain symptoms, or summarizing a medical image such as xray, CT-scan in base 64 format.
         """        
         handler = AssertImageSent(raise_if_missing=True)
 
@@ -314,7 +282,7 @@ class AgenticAssistantService:
                 blocks.append({"type": "image_url", "image_url": {"url": f"data:{image_mime};base64,{resized_and_lower_quality}"}})
 
 
-            # the trick here is that when passing to the main orchestrating LLM, we use a lower quality and 
+            # the trick here is that when passing to the main orchestrating LLM, we use a lower quality and lower resolution
             # but we will pass the squared_image version of the high quality image to the medgemma LLM
             init_state = {
                 "messages": [HumanMessage(content=blocks if blocks else user_text)],
