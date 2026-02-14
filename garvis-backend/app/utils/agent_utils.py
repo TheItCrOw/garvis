@@ -11,7 +11,8 @@ class AssertImageSent(BaseCallbackHandler):
     def on_chat_model_start(self, serialized, messages, **kwargs):
         found = False
         for batch in messages:
-            for msg in batch:
+            #only get the very last message and detect if there is a passed image
+            for msg in batch[-1:]:
                 for url in iter_image_urls(getattr(msg, "content", None)):
                     if isinstance(url, str) and "base64," in url:
                         b64 = url.split("base64,", 1)[1]
