@@ -449,7 +449,7 @@ class DataService:
                     prescription_given, notes, outcome, follow_up_required,
                     severity, created_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, (? AT TIME ZONE 'UTC'), (? AT TIME ZONE 'UTC'), ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 RETURNING
                     history_id, patient_id, doctor_id, event_type,
                     event_start_at, event_end_at,
