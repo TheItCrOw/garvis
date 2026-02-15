@@ -6,7 +6,7 @@ import re
 import math
 from io import BytesIO
 
-def tiff_bytes_to_jpeg_bytes(tiff_bytes: bytes, *, quality: int = 95) -> bytes:
+def tiff_bytes_to_jpeg_bytes(tiff_bytes: bytes, *, quality: int = 100) -> bytes:
     with Image.open(io.BytesIO(tiff_bytes)) as im:
         # If it's a multi-page TIFF, take the first page/frame
         try:
@@ -84,7 +84,7 @@ def image_dimensions_to_square(
     quality: int = 100
 ) -> str:
     """
-    "Squares" the image if the input image is not a perfect square, the image wil be centered and and side with lower dimension will be filled with black border.
+    "Squares" the image if the input image is not a perfect square, the image will be centered and side with lower dimension will be filled with black border.
     """
     img_data = base64.b64decode(b64, validate=True)
     img = Image.open(BytesIO(img_data)).convert("RGB")

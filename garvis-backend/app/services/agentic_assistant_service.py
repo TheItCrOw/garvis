@@ -1,15 +1,16 @@
 import app.constants.agentic_assistant_constants as agent_constants
 import app.schemas.client_command as client_command
 import app.utils.agent_utils as agent_utils
+import app.utils.image_utils as image_utils
+import app.utils.llm_utils as llm_utils
 import base64, mimetypes
 import os
 
 from app.core.dto.agent_state import AgentState
 from app.core.dto.garvis_dtos import GarvisReply, GarvisTask
 from app.database.duckdb_data_service import DataService
-import app.utils.image_utils as image_utils
-import app.utils.llm_utils as llm_utils
-
+from app.utils.agent_utils import AssertImageSent
+from fastapi import HTTPException, status
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -17,12 +18,9 @@ from langchain_core.tools import tool
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 from langchain_ollama import ChatOllama
-from langchain.tools import InjectedState  # per docs
+from langchain.tools import InjectedState
 from threading import Lock
 from typing import ClassVar, Optional, Annotated
-from fastapi import HTTPException, status
-from app.utils.agent_utils import AssertImageSent
-
 
 class AgenticAssistantService:
     _ollama_lock: ClassVar[Lock] = Lock()
@@ -73,7 +71,7 @@ class AgenticAssistantService:
                 model_name=os.getenv("OPENAI_MODEL")
             )
 
-    def __init__(self):
+    def __init__(self,persist_graph_visualization=False):
         self.ollama_pure_text = AgenticAssistantService.get_ollama_pure_text()
         self.ollama_with_image = AgenticAssistantService.get_ollama_with_image()
         self._graph = None
@@ -82,6 +80,11 @@ class AgenticAssistantService:
 
         if not self._graph:
             self._graph = self._build_graph()
+
+        if persist_graph_visualization:
+            png_bytes = self._graph.get_graph().draw_mermaid_png()
+            with open("./app/services/graph_visualization/graph.png", "wb") as f:
+                f.write(png_bytes)
 
     def _get_tool_method_call(self):
         return "function_calling" if self._orchetrating_llm_flavor == "GOOGLE" else "json_schema"
@@ -225,7 +228,7 @@ class AgenticAssistantService:
         # Return only the state updates you want to apply
         return state
 
-    def _build_graph(self, persist_graph_visualization=False):
+    def _build_graph(self):
         checkpointer = InMemorySaver()
         builder = StateGraph(AgentState)
         builder.add_node("assistant", self._assistant_node)
@@ -243,11 +246,6 @@ class AgenticAssistantService:
         builder.add_edge("clean_up_images", END)
 
         compiled_graph = builder.compile(checkpointer=checkpointer)
-
-        if persist_graph_visualization:
-            png_bytes = compiled_graph.get_graph().draw_mermaid_png()
-            with open("./app/services/graph_visualization/graph.png", "wb") as f:
-                f.write(png_bytes)
 
         return compiled_graph
 

@@ -65,6 +65,6 @@ SYSTEM_PROMPT = """
         - Use explicit joins.
         - Adhere to ANSI-SQL standards.
         - ensure that the JSON adheres to JSON standard format
-        - if an image was uploaded, determine if it's a medical related image or not, if yes, use the built-in MEDGEMMA tool to triage and analyze it. Else reject it and state that you only accept medical related images
+        - if an image was uploaded, determine if it's a medical related image or not, if yes, use the built-in MEDGEMMA tool to triage and analyze it. Else reject it and state that you only accept medical related images.
             - submit the base64 image string to the MEDGEMMA tool
         """
