@@ -121,6 +121,20 @@ class AgenticAssistantService:
         Get the server's current datetime in UTC as an ISO 8601 string with a 'Z' suffix. 
         """
         return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    
+    @tool
+    def get_hospital_location() -> str:
+        """
+        Get the hospital's specific address and location where Garvis is deployed.
+        """        
+        return "Lange Str. 7, 60311 Frankfurt am Main, Germany"
+
+    @tool
+    def get_hospital_name() -> str:
+        """
+        Get the name of the hospital where Garvis is deployed.
+        """        
+        return "St. Gemma Medical Center"
 
     @tool
     def medgemma_reasoner_text(task: str) -> str:
@@ -180,7 +194,9 @@ class AgenticAssistantService:
             self.medgemma_reasoner_text,
             self.medgemma_reasoner_image,
             DuckDuckGoSearchRun(),
-            self.get_server_utc_datetime
+            self.get_server_utc_datetime,
+            self.get_hospital_location,
+            self.get_hospital_name
         ]
 
         tools_collection.extend(
