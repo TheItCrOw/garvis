@@ -1,0 +1,145 @@
+.note-record-btn {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+
+  padding: 10px 14px;
+  border-radius: 30px;
+  border: none;
+  cursor: pointer;
+
+  background-color: #2563eb;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  z-index: 99;
+}
+
+.note-record-btn.recording {
+  background-color: var(--danger-color);
+}
+
+.recording-div .backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+  z-index: 97;
+  background-color: rgba(255, 255, 255, 0.6);
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Animated recording border */
+.recording-div .backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 4px solid var(--primary-color);
+  border-radius: 8px;
+  pointer-events: none;
+
+  animation: recordingPulse 1.5s ease-in-out infinite;
+}
+
+/* Animation */
+@keyframes recordingPulse {
+  0% {
+    opacity: 0.6;
+    box-shadow: 0 0 0px rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 25px rgba(220, 38, 38, 0.8);
+  }
+  100% {
+    opacity: 0.6;
+    box-shadow: 0 0 0px rgba(220, 38, 38, 0.4);
+  }
+}
+
+.recording-div .listening-message {
+  position: fixed;
+  top: 25%;
+  width: 100%;
+  text-align: center;
+  z-index: 98;
+}
+
+/* Result overlay: same general style but no animation */
+.recording-result .result-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: auto;
+  backdrop-filter: blur(4px);
+  z-index: 97;
+  background-color: rgba(255, 255, 255, 0.6);
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Static border (no animation) */
+.recording-result .result-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 4px solid var(--primary-color);
+  border-radius: 8px;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+/* Centered card */
+.recording-result .result-card {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(720px, calc(100vw - 32px));
+  max-height: 60vh;
+
+  background: white;
+  border-radius: 12px;
+  padding: 16px 16px 14px 16px;
+
+  z-index: 98;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.recording-result .result-title {
+  margin: 0 28px 10px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.recording-result .result-text {
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+
+  overflow: auto;
+  max-height: calc(60vh - 60px);
+  padding-right: 6px;
+}
+
+/* Close button (top-right of card) */
+.recording-result .result-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+
+  border: none;
+  background: var(--primary-color);
+  cursor: pointer;
+  padding: 3px 4px;
+  border-radius: 8px;
+}
+
+.recording-result .result-close:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
