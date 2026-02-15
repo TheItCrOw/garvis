@@ -29,7 +29,6 @@ class DataService:
 
         with self.connection() as con:
             con.execute("SELECT 1").fetchone()
-            con.sql("SET TimeZone = 'America/Los_Angeles'")
         print(f"Setup the DataService with DuckDB under {db_path}")
 
     @contextmanager
@@ -38,6 +37,7 @@ class DataService:
         Create a new connection per usage, safe for web servers and concurrent requests.
         """
         con: duckdb.DuckDBPyConnection = duckdb.connect(self.db_path, read_only=False)
+        con.execute("SET TimeZone='UTC'")
         try:
             yield con
         finally:
@@ -149,7 +149,7 @@ class DataService:
                 """
                 SELECT *
                 FROM calendar
-                WHERE doctor_id = ? AND DATE(start_at) = ?
+                WHERE doctor_id = ? AND DATE(start_at AT TIME ZONE 'UTC') = ?
                 ORDER BY start_at ASC
                 """,
                 (doctor_id, day),
