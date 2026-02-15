@@ -52,3 +52,13 @@ class TextToSpeechService:
         # encode for WS transport
         audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
         return audio_b64, "audio/mpeg"
+
+
+if __name__ == "__main__":
+    # Usage from root folder:
+    #   python .\app\services\text_to_speech_service.py
+    tts_service = TextToSpeechService()
+    test_text = "Understood, let me transcribe..."
+    tts_service.synthesize_speech_mp3_b64(
+        text=test_text, output_path=Path("./audio/garvis/test_text.mp3")
+    )

@@ -8,12 +8,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.health import router as health_router
 from app.api.calendar import router as calendar_router
 from app.api.patient import router as patients_router
+from app.api.medasr import router as medasr_router
 from app.api.xray import router as xrays_router
 from app.database.duckdb_data_service import DataService
 from app.core.dto.garvis_dtos import GarvisTask
 from app.core.garvis import get_garvis
 from app.api.ws_garvis_router import router as ws_garvis_router
 from app.schemas.garvis_query import GarvisQuery
+from app.services.medasr_service import test as medasr_test
 
 load_dotenv()
 
@@ -33,6 +35,7 @@ app.include_router(ws_garvis_router)
 app.include_router(health_router, prefix="/api")
 app.include_router(calendar_router, prefix="/api")
 app.include_router(patients_router, prefix="/api")
+app.include_router(medasr_router, prefix="/api")
 app.include_router(xrays_router, prefix="/api")
 
 print(f"Orchestrating LLM Flavor: {os.getenv("LLM_FLAVOR")}")

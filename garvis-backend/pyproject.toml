@@ -37,7 +37,13 @@ dependencies = [
   "tabulate",
   "pytz",
   "python-multipart",
-  "Pillow"
+  "Pillow",
+  "huggingface-hub",
+  "torch",
+  "transformers",
+  "soundfile",
+  "kenlm==0.3.0",
+  "pyctcdecode @ git+https://github.com/mediacatch/pyctcdecode.git@ff49fc562bf8fc5d6697d4dcd34188dd630cc977"
 ]
 
 [project.optional-dependencies]
