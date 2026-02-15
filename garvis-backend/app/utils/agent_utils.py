@@ -13,16 +13,15 @@ class AssertImageSent(BaseCallbackHandler):
         found = False
         for batch in messages:
             #only get the very last message and detect if there is a passed image
-            for msg in batch[-1:]:
-                for url in iter_image_urls(getattr(msg, "content", None)):
-                    if isinstance(url, str) and "base64," in url:
-                        b64 = url.split("base64,", 1)[1]
-                        h = hashlib.sha256(b64.encode("utf-8")).hexdigest()[:12]
-                        print(f"{self.caller}| [probe] image data url detected, sha256[:12]={h}, b64_len={len(b64)}")
-                        found = True
+            for url in iter_image_urls(getattr(batch[-1], "content", None)):
+                if isinstance(url, str) and "base64," in url:
+                    b64 = url.split("base64,", 1)[1]
+                    h = hashlib.sha256(b64.encode("utf-8")).hexdigest()[:12]
+                    print(f"{self.caller}| Image data url detected in ***LATEST*** message, sha256[:12]={h}, b64_len={len(b64)}")
+                    found = True
 
         if self.raise_if_missing and not found:
-            raise RuntimeError("No base64 image block found in LLM input messages.")
+            raise RuntimeError("No base64 image block found in ***LATEST*** message.")
 
 def iter_image_urls(content):
     if isinstance(content, list):

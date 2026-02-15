@@ -35,7 +35,7 @@ app.include_router(calendar_router, prefix="/api")
 app.include_router(patients_router, prefix="/api")
 app.include_router(xrays_router, prefix="/api")
 
-print(f"LLM Flavor: {os.getenv("LLM_FLAVOR")}")
+print(f"Orchestrating LLM Flavor: {os.getenv("LLM_FLAVOR")}")
 
 garvis = get_garvis()
 

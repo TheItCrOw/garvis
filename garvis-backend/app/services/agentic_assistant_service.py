@@ -57,8 +57,8 @@ class AgenticAssistantService:
         cls._data_service = data_service
 
     def _initialize_orchestrating_llms(self):
-        self._llm_flavor = os.getenv("LLM_FLAVOR")
-        if self._llm_flavor == "GOOGLE":
+        self._orchetrating_llm_flavor = os.getenv("LLM_FLAVOR")
+        if self._orchetrating_llm_flavor == "GOOGLE":
             self._orchestrating_llm_with_tools = llm_utils.instantiate_google_llm(
                 model_name=os.getenv("GEMINI_MODEL")
             ).bind_tools(self.return_tools(), strict=True)
@@ -84,7 +84,7 @@ class AgenticAssistantService:
             self._graph = self._build_graph()
 
     def _get_tool_method_call(self):
-        return "function_calling" if self._llm_flavor == "GOOGLE" else "json_schema"
+        return "function_calling" if self._orchetrating_llm_flavor == "GOOGLE" else "json_schema"
 
     @tool
     def get_schema() -> str:
@@ -113,7 +113,8 @@ class AgenticAssistantService:
     def medgemma_reasoner_text(task: str) -> str:
         """
         This is the MEDGEMMA tool for pure text only. Use the Med Gemma model for medical-related inquiries, like asking what disease or ailment shows certain symptoms.
-        Or in cases where for certain situations, what is the first aid or certain diseases. Only use this if the intent is very clear.
+        Or in cases where for certain situations, what is the first aid or certain diseases.
+        Only use this if the intent is very clear.
         """
         config = {}
 
@@ -134,9 +135,10 @@ class AgenticAssistantService:
         image_mime: Annotated[Optional[str], InjectedState("image_mime")],
     ) -> str:
         """
-        This is the MEDGEMMA tool when submitting text with images. Use the Med Gemma model for medical-related inquiries and when analyzing medical images.
+        This is the MEDGEMMA tool when submitting medical text inquiries with medical images.
+        Use the Med Gemma model for medical-related inquiries and when analyzing medical images.
         Examples are like when asking what disease or ailment shows certain symptoms, or summarizing a medical image such as xray, CT-scan in base 64 format.
-        Only use this if the intent is very clear.
+        Only use this if the intent is very clear and you are certain that the image is medical in nature.
         """
         handler = AssertImageSent(caller="medgemma",raise_if_missing=True)
 
@@ -340,7 +342,7 @@ class AgenticAssistantService:
             # google llms wrap their messages in a list of dicts with a "text" key
             content = (
                 final_state["messages"][-1].content[-1]["text"]
-                if self._llm_flavor == "GOOGLE"
+                if self._orchetrating_llm_flavor == "GOOGLE"
                 else final_state["messages"][-1].content
             )
 

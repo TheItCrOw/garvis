@@ -57,12 +57,20 @@ def detect_image_mime_pillow(b64: str):
     mime = Image.MIME.get(fmt)  # e.g. 'image/png'
     return {"is_image": True, "mime": mime, "format": fmt}
 
-def decrease_image_size(b64, quality=67):
+def decrease_image_size(b64, quality=50):
+    """
+    Lower the dimensions and quality of the image. Either using the 512 pixels or the 0.66 of the longest side, whatever side is lower.
+    Then apply quality reduction at 50 (1-100), this is to save and minimize costs with the orchestrsating LLM
+    """
+    fallback_minimum_side = 512
     img_data = base64.b64decode(b64, validate=True)
     img = Image.open(BytesIO(img_data))
+    
     width, height = img.size
-
-    output_size=(width * 0.66, height * 0.66)
+    resized_size = (width * 0.66, height * 0.66)
+    max_size = max(resized_size)
+    actual_size = min(fallback_minimum_side, max_size)
+    output_size=(actual_size, actual_size)
     img.thumbnail(output_size) # Maintains aspect ratio [1]
     
     buffer = BytesIO()
@@ -75,15 +83,18 @@ def image_dimensions_to_square(
     b64: str,
     quality: int = 100
 ) -> str:
+    """
+    "Squares" the image if the input image is not a perfect square, the image wil be centered and and side with lower dimension will be filled with black border.
+    """
     img_data = base64.b64decode(b64, validate=True)
     img = Image.open(BytesIO(img_data)).convert("RGB")
 
-    w, h = img.size
-    side = max(w, h)
+    width, height = img.size
+    side = max(width, height)
 
     # Create square black canvas and center the image on it
     square = Image.new("RGB", (side, side), (0, 0, 0))
-    square.paste(img, ((side - w) // 2, (side - h) // 2))
+    square.paste(img, ((side - width) // 2, (side - height) // 2))
 
     buffer = BytesIO()
     square.save(buffer, format="JPEG", quality=quality, optimize=True)
