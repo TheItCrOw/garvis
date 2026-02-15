@@ -110,6 +110,7 @@ class AgenticAssistantService:
 
         if df.empty:
             return f"SQL:\n{sql}\n\nResult: (no rows)"
+        df = df.where(df.notna(), "")
         return f"SQL:\n{sql}\n\nResult:\n{df.to_markdown(index=False)}"
 
     @tool
