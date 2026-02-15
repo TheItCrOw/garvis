@@ -136,3 +136,39 @@ def png_b64_to_jpg_b64_no_alpha(
 
     # Return base64 (no prefix)
     return base64.b64encode(jpg_bytes).decode("utf-8")
+
+def bmp_b64_to_jpg_b64(
+    bmp_b64: str,
+    quality: int = 100
+) -> str:
+    """
+    Convert a base64-encoded BMP image (optionally a data URL) to a base64-encoded JPEG,
+    removing transparency (if present) by compositing onto a solid background.
+
+    Args:
+        bmp_b64: Base64 string, with or without a 'data:image/bmp;base64,...' prefix.
+        bg: Background RGB tuple (default white).
+        quality: JPEG quality (1-95 recommended).
+
+    Returns:
+        Base64 string of the resulting JPEG (no data URL prefix).
+    """
+
+    #if "base64," in bmp_b64:
+    #    bmp_b64 = bmp_b64.split(",", 1)[1]
+    
+    #bmp_bytes = base64.b64decode(bmp_b64, validate=True)
+
+    # Load with Pillow
+    img = Image.open(io.BytesIO(bmp_b64))
+
+    # 3. Convert the image to RGB mode to ensure JPG compatibility
+    if img.mode != 'RGB':
+        img = img.convert('RGB')
+
+    # Encode to JPEG bytes
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=quality, optimize=True)
+
+    # Return base64 (no prefix)
+    return base64.b64encode(buf.getvalue()).decode("utf-8")

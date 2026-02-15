@@ -20,9 +20,6 @@ from app.core.models.database_models import (
     JsonDataclassMixin,
 )
 
-SERVER_TIME_ZONE = ZoneInfo("America/Los_Angeles")
-
-
 class DataService:
     def __init__(self, db_path: str = "./data/garvis.duckdb") -> None:
         self.db_path: str = db_path
@@ -32,6 +29,7 @@ class DataService:
 
         with self.connection() as con:
             con.execute("SELECT 1").fetchone()
+            con.sql("SET TimeZone = 'America/Los_Angeles'")
         print(f"Setup the DataService with DuckDB under {db_path}")
 
     @contextmanager
@@ -143,7 +141,7 @@ class DataService:
         Default day: today in Europe/Berlin.
         """
         if day is None:
-            day = datetime.now(SERVER_TIME_ZONE).date()
+            day = datetime.now().date()
 
         with self.connection() as con:
             rows = self._fetchall_dicts(
@@ -432,7 +430,7 @@ class DataService:
         Returns the created PatientHistory row.
         """
         if created_at is None:
-            created_at = datetime.now(SERVER_TIME_ZONE)
+            created_at = datetime.now()
 
         with self.connection() as con:
             row = self._fetchone_dict(
@@ -495,7 +493,7 @@ class DataService:
         with prescription_given filled.
         """
         if event_start_at is None:
-            event_start_at = datetime.now(SERVER_TIME_ZONE)
+            event_start_at = datetime.now()
 
         # If no end time provided, leave NULL (or set same as start if you prefer)
         return self.add_patient_history(
@@ -550,7 +548,7 @@ class DataService:
         if country is not None:
             add("country", country)
 
-        add("updated_at", datetime.now(SERVER_TIME_ZONE))
+        add("updated_at", datetime.now())
 
         if not fields:
             return self.get_patient_by_id(patient_id)
