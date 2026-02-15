@@ -20,6 +20,7 @@ from app.core.models.database_models import (
     JsonDataclassMixin,
 )
 
+
 class DataService:
     def __init__(self, db_path: str = "./data/garvis.duckdb") -> None:
         self.db_path: str = db_path
@@ -386,7 +387,12 @@ class DataService:
                     doctor_id, patient_id, start_at, end_at,
                     entry_type, title, location, priority, status, notes
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (
+                    ?, ?,
+                    (? AT TIME ZONE 'UTC'),
+                    (? AT TIME ZONE 'UTC'),
+                    ?, ?, ?, ?, ?, ?
+                )
                 RETURNING
                     calendar_id, doctor_id, patient_id, start_at, end_at,
                     entry_type, title, location, priority, status, notes
