@@ -302,9 +302,15 @@ class AgenticAssistantService:
                 elif image_mime in ("image/png"):
                     image_b64 = image_utils.png_b64_to_jpg_b64_no_alpha(raw_bytes)
                     image_mime = "image/jpeg"
+                elif image_mime in ("image/jpg","image/jpeg","image/jpe"):
+                    image_b64 = base64.b64encode(raw_bytes)
+                    image_mime = "image/jpeg"
+                elif image_mime in ("image/bmp","image/x-ms-bmp"):
+                    image_b64 = image_utils.bmp_b64_to_jpg_b64(raw_bytes)
+                    image_mime = "image/jpeg"
                 else:
-                    image_b64 = base64.b64encode(raw_bytes).decode("utf-8")
-                    image_mime = image_mime or "image/jpeg"
+                    image_b64 = base64.b64encode(raw_bytes)
+                    image_mime = image_mime or "image/jpeg"                    
 
                 squared_image = image_utils.image_dimensions_to_square(image_b64)
                 resized_and_lower_quality = image_utils.decrease_image_size(squared_image)
