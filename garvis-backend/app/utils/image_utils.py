@@ -57,7 +57,7 @@ def detect_image_mime_pillow(b64: str):
     mime = Image.MIME.get(fmt)  # e.g. 'image/png'
     return {"is_image": True, "mime": mime, "format": fmt}
 
-def preprocess_image(b64, quality=67):
+def decrease_image_size(b64, quality=67):
     img_data = base64.b64decode(b64, validate=True)
     img = Image.open(BytesIO(img_data))
     width, height = img.size
@@ -71,7 +71,7 @@ def preprocess_image(b64, quality=67):
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
 
-def jpg_b64_to_square_jpg_b64_black(
+def image_dimensions_to_square(
     b64: str,
     quality: int = 100
 ) -> str:

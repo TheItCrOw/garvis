@@ -113,7 +113,7 @@ class AgenticAssistantService:
     def medgemma_reasoner_text(task: str) -> str:
         """
         This is the MEDGEMMA tool for pure text only. Use the Med Gemma model for medical-related inquiries, like asking what disease or ailment shows certain symptoms.
-        Or in cases where for certain situations, what is the first aid or certain diseases.
+        Or in cases where for certain situations, what is the first aid or certain diseases. Only use this if the intent is very clear.
         """
         config = {}
 
@@ -136,6 +136,7 @@ class AgenticAssistantService:
         """
         This is the MEDGEMMA tool when submitting text with images. Use the Med Gemma model for medical-related inquiries and when analyzing medical images.
         Examples are like when asking what disease or ailment shows certain symptoms, or summarizing a medical image such as xray, CT-scan in base 64 format.
+        Only use this if the intent is very clear.
         """
         handler = AssertImageSent(caller="medgemma",raise_if_missing=True)
 
@@ -179,6 +180,12 @@ class AgenticAssistantService:
             config={"callbacks": [handler]},
         )
         state["messages"] = state["messages"] + [response]
+        return state
+
+    def _clean_up_images(self, state: AgentState) -> AgentState:
+        state["image_b64"] = None
+        state["image_b64_lower_quality"] = None
+        state["image_mime"] = None
         return state
 
     def _should_continue(self, state: AgentState) -> str:
@@ -229,7 +236,9 @@ class AgenticAssistantService:
         )
         builder.add_edge("tools", "assistant")
         builder.add_node("route_to_client_command", self._route_to_client_command)
-        builder.add_edge("route_to_client_command", END)
+        builder.add_node("clean_up_images", self._clean_up_images)
+        builder.add_edge("route_to_client_command", "clean_up_images")
+        builder.add_edge("clean_up_images", END)
 
         compiled_graph = builder.compile(checkpointer=checkpointer)
 
@@ -267,8 +276,8 @@ class AgenticAssistantService:
                 else:
                     image_mime = validation_check["mime"]
 
-                squared_image = image_utils.jpg_b64_to_square_jpg_b64_black(image_b64)
-                resized_and_lower_quality = image_utils.preprocess_image(squared_image)
+                squared_image = image_utils.image_dimensions_to_square(image_b64)
+                resized_and_lower_quality = image_utils.decrease_image_size(squared_image)
                 blocks.append(
                     {
                         "type": "image_url",
@@ -297,8 +306,8 @@ class AgenticAssistantService:
                     image_b64 = base64.b64encode(raw_bytes).decode("utf-8")
                     image_mime = image_mime or "image/jpeg"
 
-                squared_image = image_utils.jpg_b64_to_square_jpg_b64_black(image_b64)
-                resized_and_lower_quality = image_utils.preprocess_image(squared_image)
+                squared_image = image_utils.image_dimensions_to_square(image_b64)
+                resized_and_lower_quality = image_utils.decrease_image_size(squared_image)
                 blocks.append(
                     {
                         "type": "image_url",

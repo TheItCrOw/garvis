@@ -38,12 +38,14 @@ ROUTER_SYSTEM_PROMPT = """\
             - if the intent is something like "OPEN UP THE PATIENT FILE" or "GO TO PATIENT" or "VIEW PATIENT DETAILS" return "Patient"
             - if the intent is something like "OPEN UP THE Doctor FILE" or "GO TO Doctor" or "VIEW DOCTOR DETAILS" return "Doctor"
             - if the intent is something like "OPEN UP CALENDAR OF..." or "GO TO SCHEDULE of..." or "VIEW CALENDAR DETAILS" return "Calendar"
+            - if the intent is something like "OPEN UP XRAY OF..." or "GO TO XRAY of..." or "VIEW XRAY DETAILS" return "Xray"
             - if the intent is unclear, select "None" for view
         - Your only choices with action are only the following ["Add","View","Update","Delete","List","None"]
             - if the intent is something like "Add a calendar event" or "add a new patient record" then choose "Add"
             - if the intent is something like "Open the patient file of patient 1" or "open calendar on Jan 23, 2026" then choose "View"
             - if the intent is something like "List me the patients" or "I want to see all the doctors" then choose "List"
-        - If there is an intent but it was unclear and not enough instructions were give, default to {"view":"None", "action":"None", "parameters":{"mode":"clarify"}}
+            - if the intent is something like "Delete the xray of..." or "Remove the xray pf patient" then choose "Delete"
+        - If there is an intent but it was unclear and not enough instructions were give, ask the user to clarify and default to {"view":"None", "action":"None", "parameters":{"mode":"clarify"}}
         - Else default to {"view":"None", "action":"None", "parameters":{"mode":"chat"}}
         """
 
