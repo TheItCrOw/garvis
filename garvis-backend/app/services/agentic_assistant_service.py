@@ -10,6 +10,8 @@ from app.core.dto.agent_state import AgentState
 from app.core.dto.garvis_dtos import GarvisReply, GarvisTask
 from app.database.duckdb_data_service import DataService
 from app.utils.agent_utils import AssertImageSent
+from datetime import datetime, timezone
+
 from fastapi import HTTPException, status
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_community.tools import DuckDuckGoSearchRun
@@ -114,6 +116,13 @@ class AgenticAssistantService:
         return f"SQL:\n{sql}\n\nResult:\n{df.to_markdown(index=False)}"
 
     @tool
+    def get_server_utc_datetime() -> str:
+        """
+        Get the server's current datetime in UTC as an ISO 8601 string with a 'Z' suffix. 
+        """
+        return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+    @tool
     def medgemma_reasoner_text(task: str) -> str:
         """
         This is the MEDGEMMA tool for pure text only. Use the Med Gemma model for medical-related inquiries, like asking what disease or ailment shows certain symptoms.
@@ -171,6 +180,7 @@ class AgenticAssistantService:
             self.medgemma_reasoner_text,
             self.medgemma_reasoner_image,
             DuckDuckGoSearchRun(),
+            self.get_server_utc_datetime
         ]
 
         tools_collection.extend(
