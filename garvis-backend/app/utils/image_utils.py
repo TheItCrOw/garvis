@@ -6,7 +6,7 @@ import re
 import math
 from io import BytesIO
 
-def tiff_bytes_to_jpeg_bytes(tiff_bytes: bytes, *, quality: int = 100) -> bytes:
+def tiff_to_jpg(tiff_bytes: bytes, *, quality: int = 100) -> bytes:
     with Image.open(io.BytesIO(tiff_bytes)) as im:
         # If it's a multi-page TIFF, take the first page/frame
         try:
@@ -28,10 +28,6 @@ def tiff_bytes_to_jpeg_bytes(tiff_bytes: bytes, *, quality: int = 100) -> bytes:
         out = io.BytesIO()
         im.save(out, format="JPEG", quality=quality, optimize=True, progressive=True)
         return out.getvalue()
-    
-def b64_jpeg_from_tiff_bytes(tiff_bytes: bytes, *, quality: int = 95) -> str:
-    jpeg_bytes = tiff_bytes_to_jpeg_bytes(tiff_bytes, quality=quality)
-    return base64.b64encode(jpeg_bytes).decode("utf-8")    
 
 def detect_image_mime_pillow(b64: str):
     # strip data URL if present
@@ -101,7 +97,7 @@ def image_dimensions_to_square(
 
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
-def png_b64_to_jpg_b64_no_alpha(
+def png_to_jpg(
     png_b64: str,
     bg=(255, 255, 255),
     quality: int = 100
@@ -135,7 +131,7 @@ def png_b64_to_jpg_b64_no_alpha(
 
     return base64.b64encode(jpg_bytes).decode("utf-8")
 
-def bmp_b64_to_jpg_b64(
+def bmp_to_jpg(
     bmp_b64: str,
     quality: int = 100
 ) -> str:

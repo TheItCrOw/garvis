@@ -165,7 +165,7 @@ class AgenticAssistantService:
         This is the MEDGEMMA tool when submitting medical text inquiries with medical images.
         Use the Med Gemma model for medical-related inquiries and when analyzing medical images.
         Examples are like when asking what disease or ailment shows certain symptoms, or summarizing a medical image such as xray, CT-scan in base 64 format.
-        Only use this if the intent is very clear and you are certain that the image is medical in nature.
+        Only use this if the intent is very clear and you are certain that the submitted image is medical in nature.
         """
         handler = AssertImageSent(caller="medgemma",raise_if_missing=True)
 
@@ -320,25 +320,22 @@ class AgenticAssistantService:
                 with open(image_path, "rb") as f:
                     raw_bytes = f.read()
 
-                if (
-                    image_mime in ("image/tiff", "image/x-tiff")
-                ) or image_path.lower().endswith((".tif", ".tiff")):
-                    jpeg_bytes = image_utils.tiff_bytes_to_jpeg_bytes(raw_bytes)
+                if (image_mime in ("image/tiff", "image/x-tiff")) or image_path.lower().endswith((".tif", ".tiff")):
+                    jpeg_bytes = image_utils.tiff_to_jpg(raw_bytes)
                     image_b64 = base64.b64encode(jpeg_bytes).decode("utf-8")
-                    image_mime = "image/jpeg"
-                elif image_mime in ("image/png"):
-                    image_b64 = image_utils.png_b64_to_jpg_b64_no_alpha(raw_bytes)
-                    image_mime = "image/jpeg"
-                elif image_mime in ("image/jpg","image/jpeg","image/jpe"):
+                elif(image_mime in ("image/png")):
+                    image_b64 = image_utils.png_to_jpg(raw_bytes)
+                elif(image_mime in ("image/jpg","image/jpeg","image/jpe")):
                     image_b64 = base64.b64encode(raw_bytes)
-                    image_mime = "image/jpeg"
-                elif image_mime in ("image/bmp","image/x-ms-bmp"):
-                    image_b64 = image_utils.bmp_b64_to_jpg_b64(raw_bytes)
-                    image_mime = "image/jpeg"
+                elif(image_mime in ("image/bmp","image/x-ms-bmp")):
+                    image_b64 = image_utils.bmp_to_jpg(raw_bytes)
                 else:
-                    image_b64 = base64.b64encode(raw_bytes)
-                    image_mime = image_mime or "image/jpeg"                    
-
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"sorry, unsupported image type",
+                    )                  
+                
+                image_mime = "image/jpeg"
                 squared_image = image_utils.image_dimensions_to_square(image_b64)
                 resized_and_lower_quality = image_utils.decrease_image_size(squared_image)
                 blocks.append(

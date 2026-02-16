@@ -97,7 +97,7 @@ http://127.0.0.1:8000/redoc
 
 ## Development
 
-To run debug using visual-studio code
+To debug the back-end using visual-studio code
 
 hit CTRL+SHIFT+D and configure this from within your IDE
 
@@ -105,6 +105,7 @@ hit CTRL+SHIFT+D and configure this from within your IDE
 {
   "version": "0.2.0",
   "configurations": [
+
     {
       "name": "FastAPI (uvicorn module)",
       "type": "debugpy",
@@ -114,7 +115,8 @@ hit CTRL+SHIFT+D and configure this from within your IDE
       "cwd": "${workspaceFolder}/garvis-backend",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "subProcess": true
+      "subProcess": true,
+      "python": "${workspaceFolder}/garvis-backend/.venv/bin/python"
     }
   ]
 }

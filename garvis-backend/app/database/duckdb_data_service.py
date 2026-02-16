@@ -150,11 +150,12 @@ class DataService:
                 """
                 SELECT *
                 FROM calendar
-                WHERE doctor_id = ? AND DATE(start_at AT TIME ZONE 'UTC') = ?
+                WHERE doctor_id = ? AND DATE(start_at) = ?
                 ORDER BY start_at ASC
                 """,
                 (doctor_id, day),
             )
+
             return [CalendarEntry.from_row(r) for r in rows]
 
     def get_patient_history(self, patient_id: int) -> List["PatientHistory"]:
@@ -379,6 +380,7 @@ class DataService:
         Add a calendar entry for a doctor with a patient.
         Returns the created CalendarEntry row.
         """
+
         with self.connection() as con:
             row = self._fetchone_dict(
                 con,
@@ -389,8 +391,8 @@ class DataService:
                 )
                 VALUES (
                     ?, ?,
-                    (? AT TIME ZONE 'UTC'),
-                    (? AT TIME ZONE 'UTC'),
+                    CAST(? AS TIMESTAMP),
+                    CAST(? AS TIMESTAMP),
                     ?, ?, ?, ?, ?, ?
                 )
                 RETURNING
@@ -449,7 +451,7 @@ class DataService:
                     prescription_given, notes, outcome, follow_up_required,
                     severity, created_at
                 )
-                VALUES (?, ?, ?, (? AT TIME ZONE 'UTC'), (? AT TIME ZONE 'UTC'), ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, CAST(? AS TIMESTAMP), CAST(? AS TIMESTAMP), ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS TIMESTAMP)
                 RETURNING
                     history_id, patient_id, doctor_id, event_type,
                     event_start_at, event_end_at,
