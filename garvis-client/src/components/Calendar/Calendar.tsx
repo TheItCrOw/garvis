@@ -121,7 +121,7 @@ export function Calendar({
             </div>
             <ul className="notes mb-0">
               {entry.notes
-                ?.split("-")
+                ?.split("- ")
                 .map((note) =>
                   note.length > 3 ? <li key={note}>{note}</li> : null,
                 )}

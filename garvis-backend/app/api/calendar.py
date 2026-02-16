@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Body
 from app.database.duckdb_data_service import data_service
 from app.core.models.database_models import CalendarEntry
 from dataclasses import asdict
@@ -42,3 +42,29 @@ def get_calendar_of_doctor_for_day(
             out.append(asdict(e))
 
     return out
+
+
+@router.get("/closest-meeting/notes")
+def update_closest_meeting_notes(
+    doctor_id: int = Query(..., gt=0),
+    notes: Optional[str] = Query(default=None),
+):
+    """
+    Updates the closest (or currently running) meeting
+    and returns the updated CalendarEntry.
+    """
+
+    try:
+        updated: CalendarEntry = (
+            data_service.update_calendar_entry_notes_of_closest_meeting(
+                doctor_id=doctor_id,
+                notes=notes,
+            )
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    if hasattr(updated, "to_dict"):
+        return updated.to_dict()
+
+    return asdict(updated)

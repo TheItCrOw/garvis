@@ -4,7 +4,7 @@ from pathlib import Path
 import duckdb
 import os
 from contextlib import contextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Generator, Literal, Optional, Any, Dict, List
 from langchain_core.tools import tool
 from zoneinfo import ZoneInfo
@@ -415,6 +415,104 @@ class DataService:
             if not row:
                 raise RuntimeError("Insert into calendar did not return a row.")
             return CalendarEntry.from_row(row)
+
+    def update_calendar_entry_notes(
+        self,
+        calendar_id: int,
+        notes: Optional[str],
+    ) -> "CalendarEntry":
+        """
+        Update notes for a specific calendar entry by id.
+        Returns the updated CalendarEntry row.
+        """
+        with self.connection() as con:
+            row = self._fetchone_dict(
+                con,
+                """
+                UPDATE calendar
+                SET notes = ?
+                WHERE calendar_id = ?
+                RETURNING
+                    calendar_id, doctor_id, patient_id, start_at, end_at,
+                    entry_type, title, location, priority, status, notes
+                """,
+                (notes, calendar_id),
+            )
+            if not row:
+                raise RuntimeError(
+                    f"Calendar entry {calendar_id} not found (no row returned)."
+                )
+            return CalendarEntry.from_row(row)
+
+    def update_calendar_entry_notes_of_closest_meeting(
+        self,
+        doctor_id: int,
+        notes: str,
+        now: Optional[datetime] = None,
+    ) -> "CalendarEntry":
+        """
+        Finds the closest calendar entry for a doctor relative to 'now':
+        1) Prefer an entry currently running: start_at <= now < end_at
+        2) Otherwise, pick the next upcoming entry (start_at >= now) with smallest start_at
+        3) If none upcoming, pick the most recent past entry (end_at <= now) with largest end_at
+        Updates that entry's notes and returns the updated CalendarEntry row.
+
+        Pass `now` for testability; defaults to current UTC time.
+        """
+        if now is None:
+            now = datetime.now(timezone.utc)
+
+        with self.connection() as con:
+            # 1) Currently running
+            running = self._fetchone_dict(
+                con,
+                """
+                SELECT calendar_id
+                FROM calendar
+                WHERE doctor_id = ?
+                AND start_at <= CAST(? AS TIMESTAMP)
+                AND end_at   >  CAST(? AS TIMESTAMP)
+                ORDER BY start_at DESC
+                LIMIT 1
+                """,
+                (doctor_id, now, now),
+            )
+            if running:
+                return self.update_calendar_entry_notes(running["calendar_id"], notes)
+
+            # 2) Next upcoming
+            upcoming = self._fetchone_dict(
+                con,
+                """
+                SELECT calendar_id
+                FROM calendar
+                WHERE doctor_id = ?
+                AND start_at >= CAST(? AS TIMESTAMP)
+                ORDER BY start_at ASC
+                LIMIT 1
+                """,
+                (doctor_id, now),
+            )
+            if upcoming:
+                return self.update_calendar_entry_notes(upcoming["calendar_id"], notes)
+
+            # 3) Most recent past (fallback)
+            past = self._fetchone_dict(
+                con,
+                """
+                SELECT calendar_id
+                FROM calendar
+                WHERE doctor_id = ?
+                AND end_at <= CAST(? AS TIMESTAMP)
+                ORDER BY end_at DESC
+                LIMIT 1
+                """,
+                (doctor_id, now),
+            )
+            if past:
+                return self.update_calendar_entry_notes(past["calendar_id"], notes)
+
+            raise RuntimeError(f"No calendar entries found for doctor_id={doctor_id}.")
 
     def add_patient_history(
         self,

@@ -10,6 +10,7 @@ import {
   type GarvisInstruction,
 } from "../../models/websocket/messages";
 import logo from "./../../assets/logo.png";
+import NoteRecordButton from "../NoteRecordButton/NoteRecordButton";
 
 type HomeProps = {
   garvisInstruction: GarvisInstruction | null;
@@ -147,6 +148,13 @@ export default function Home({
             />
           )}
         </div>
+
+        <NoteRecordButton
+          loggedInDoctor={loggedInDoctorId}
+          onRecordingNotesSave={(updateCalendarEntries) =>
+            setEntries(updateCalendarEntries)
+          }
+        />
 
         <PatientFile
           isOpen={patientFileOpen}

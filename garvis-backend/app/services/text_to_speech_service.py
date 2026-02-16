@@ -58,7 +58,7 @@ if __name__ == "__main__":
     # Usage from root folder:
     #   python .\app\services\text_to_speech_service.py
     tts_service = TextToSpeechService()
-    test_text = "Understood, let me transcribe..."
+    test_text = "Done! I saved the notes to your calendar."
     tts_service.synthesize_speech_mp3_b64(
         text=test_text, output_path=Path("./audio/garvis/test_text.mp3")
     )

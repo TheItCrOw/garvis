@@ -10,8 +10,22 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import listeningSound from "./../../assets/audio/listening.mp3";
 import understoodSound from "./../../assets/audio/understood.mp3";
+import doneSound from "./../../assets/audio/saved_notes.mp3";
+import type { CalendarEntry } from "../../models/dataModels";
+import {
+  getCalendarOfDoctor,
+  updateClosestMeetingNotes,
+} from "../../core/calendar.api";
 
-export default function NoteRecordButton() {
+type NoteRecordButtonProps = {
+  loggedInDoctor: number;
+  onRecordingNotesSave(calendarEntries: CalendarEntry[]): void;
+};
+
+export default function NoteRecordButton({
+  loggedInDoctor,
+  onRecordingNotesSave,
+}: NoteRecordButtonProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showResult, setShowResult] = useState(false);
@@ -32,6 +46,23 @@ export default function NoteRecordButton() {
 
       audio.play().catch(() => resolve());
     });
+  }
+
+  async function saveRecording() {
+    const updateCalendarEntry = await updateClosestMeetingNotes(
+      loggedInDoctor,
+      transcription,
+    );
+    const day = updateCalendarEntry.start_at
+      ? updateCalendarEntry.start_at.toISOString().slice(0, 10)
+      : undefined;
+    const newCalendarEntries = await getCalendarOfDoctor(
+      updateCalendarEntry.doctor_id ?? -1,
+      day,
+    );
+    playSound(doneSound);
+    onRecordingNotesSave(newCalendarEntries);
+    setShowResult(false);
   }
 
   async function startRecording() {
@@ -131,7 +162,10 @@ export default function NoteRecordButton() {
 
             <h3 className="result-title">MedASR Transcription</h3>
             <p className="result-text text-secondary">{transcription}</p>
-            <div className="d-flex align-items-center mt-3 justify-content-center w-100">
+            <div
+              className="d-flex align-items-center mt-3 justify-content-center w-100"
+              onClick={saveRecording}
+            >
               <button className="btn btn-light text-success w-100">Save</button>
             </div>
           </div>

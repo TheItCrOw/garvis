@@ -5,7 +5,6 @@ import Home from "./components/Home/Home";
 import GarvisButton from "./garvis/GarvisButton";
 import Landing from "./components/Landing/Landing";
 import type { GarvisInstruction } from "./models/websocket/messages";
-import NoteRecordButton from "./components/NoteRecordButton/NoteRecordButton";
 
 function About() {
   return <div className="container mt-4">About Garvis</div>;
@@ -59,8 +58,6 @@ function App() {
             }
             analyzableXrayImg={analyzableXrayImg}
           />
-
-          <NoteRecordButton />
         </>
       )}
 
