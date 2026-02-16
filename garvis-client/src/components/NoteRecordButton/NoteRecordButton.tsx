@@ -16,6 +16,7 @@ import {
   getCalendarOfDoctor,
   updateClosestMeetingNotes,
 } from "../../core/calendar.api";
+import { playSound } from "../../garvis/audioUtils";
 
 type NoteRecordButtonProps = {
   loggedInDoctor: number;
@@ -33,20 +34,6 @@ export default function NoteRecordButton({
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-
-  function playSound(sound: string): Promise<void> {
-    return new Promise((resolve) => {
-      const audio = new Audio(sound);
-      audio.volume = 0.6;
-
-      audio.onended = () => resolve();
-
-      // Fallback resolve in case onended doesn’t fire
-      setTimeout(resolve, 1200);
-
-      audio.play().catch(() => resolve());
-    });
-  }
 
   async function saveRecording() {
     const updateCalendarEntry = await updateClosestMeetingNotes(

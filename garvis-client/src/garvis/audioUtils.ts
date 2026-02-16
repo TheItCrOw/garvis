@@ -60,3 +60,17 @@ export async function playB64Audio(audioB64: string, mime: string, opts?: PlayOp
         throw e;
     }
 }
+
+export function playSound(sound: string): Promise<void> {
+    return new Promise((resolve) => {
+        const audio = new Audio(sound);
+        audio.volume = 0.6;
+
+        audio.onended = () => resolve();
+
+        // Fallback resolve in case onended doesn’t fire
+        setTimeout(resolve, 1200);
+
+        audio.play().catch(() => resolve());
+    });
+}

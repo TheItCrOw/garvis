@@ -2,8 +2,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GarvisWsClient } from "./GarvisWsClient";
 import { createWsStartRecordingContent, GarvisOpenView, type GarvisInstruction, type WsAckContent, type WsGarvisContent, type WsMessage } from "../models/websocket/messages";
-import { playB64Audio, stopCurrentAudio } from "./audioUtils";
+import { playB64Audio, playSound, stopCurrentAudio } from "./audioUtils";
 import { analyzeXrayImgById } from "../core/xrays.api";
+import analyzingImageSound from "./../assets/audio/analyze_image.mp3"
 
 type UseGarvisWsClientOptions = {
     wsUrl: string;
@@ -159,7 +160,7 @@ export function useGarvisWsClient({ wsUrl, onGarvisInstruction, loggedInDoctorId
         (async () => {
             try {
                 setGarvisIsThinking(true);
-
+                playSound(analyzingImageSound);
                 const content = await analyzeXrayImgById(analyzableXrayImgId, sessionId);
                 if (cancelled) return;
 
