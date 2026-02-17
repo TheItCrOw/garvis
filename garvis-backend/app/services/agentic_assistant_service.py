@@ -21,6 +21,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 from langchain_ollama import ChatOllama
 from langchain.tools import InjectedState
+from pathlib import Path
 from threading import Lock
 from typing import ClassVar, Optional, Annotated
 
@@ -85,6 +86,7 @@ class AgenticAssistantService:
 
         if persist_graph_visualization:
             png_bytes = self._graph.get_graph().draw_mermaid_png()
+            Path("./app/services/graph_visualization/").mkdir(parents=True, exist_ok=True)
             with open("./app/services/graph_visualization/graph.png", "wb") as f:
                 f.write(png_bytes)
 
