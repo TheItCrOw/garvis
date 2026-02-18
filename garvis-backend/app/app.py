@@ -30,6 +30,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+print(f"Orchestrating LLM Flavor: {os.getenv("LLM_FLAVOR")}")
 
 app.include_router(ws_garvis_router)
 app.include_router(health_router, prefix="/api")
@@ -37,8 +38,6 @@ app.include_router(calendar_router, prefix="/api")
 app.include_router(patients_router, prefix="/api")
 app.include_router(medasr_router, prefix="/api")
 app.include_router(xrays_router, prefix="/api")
-
-print(f"Orchestrating LLM Flavor: {os.getenv("LLM_FLAVOR")}")
 
 garvis = get_garvis()
 

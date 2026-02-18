@@ -39,8 +39,8 @@ dependencies = [
   "python-multipart",
   "Pillow",
   "huggingface-hub",
-  "torch",
-  "transformers",
+  "torch==2.10.0",
+  "transformers==5.1.0",
   "soundfile",
   "kenlm==0.3.0",
   "pyctcdecode @ git+https://github.com/mediacatch/pyctcdecode.git@ff49fc562bf8fc5d6697d4dcd34188dd630cc977"

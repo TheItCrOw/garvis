@@ -4,6 +4,8 @@ services:
     container_name: garvis-backend
     ports:
       - "8000:8000"
+    env_file:
+      - ./garvis-backend/.env
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /secrets/adc.json
       GOOGLE_CLOUD_QUOTA_PROJECT: ${GOOGLE_CLOUD_QUOTA_PROJECT}
