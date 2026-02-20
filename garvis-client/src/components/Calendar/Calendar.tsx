@@ -8,6 +8,7 @@ import {
   faArrowUp,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
+import { uuidv4 } from "zod/mini";
 
 type CalendarProps = {
   entries: CalendarEntry[];
@@ -79,7 +80,7 @@ export function Calendar({
       <div className="p-2">
         {sortedEntries.map((entry, index) => (
           <div
-            key={entry.calendar_id}
+            key={entry.calendar_id ?? uuidv4()}
             className="calendar-entry"
             onClick={() => onCalendarEntryClicked?.(entry)}
           >
@@ -115,7 +116,7 @@ export function Calendar({
                     />
                     Patient:
                   </span>
-                  <span className="patient-id">{entry.patient_id}</span>
+                  <span className="patient-id">{entry.patient_id ?? "/"}</span>
                 </p>
               </div>
             </div>
