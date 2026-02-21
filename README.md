@@ -30,7 +30,7 @@ Finally, create a `.env` file in this root folder to set the following parameter
 
 ```
 GOOGLE_CLOUD_QUOTA_PROJECT=[YOUR_BILLING_PROJECT]
-ADC_PATH="/path/to/your/application_default_credentials.json"
+ADC_PATH=$HOME/.config/gcloud/application_default_credentials.json
 
 VITE_BACKEND_WS_URL=ws://localhost:8000/ws/audio
 VITE_API_BASE=http://localhost:8000/api
@@ -41,5 +41,10 @@ VITE_API_BASE=http://localhost:8000/api
 Once you've setup your cloud, api keys and env parameters, run the docker compose command:
 
 ```
- docker-compose up --build
+docker compose up --build
 ```
+
+
+### Running the application
+
+On
