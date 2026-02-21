@@ -1,17 +1,4 @@
 services:
-  ollama:
-    image: ollama/ollama:latest
-    container_name: garvis-ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama:/root/.ollama
-    command: ["ollama", "serve"]
-    environment:
-      OLLAMA_HOST: 0.0.0.0:11434    
-    # If your Docker host supports NVIDIA GPU passthrough, this enables it.
-    # If you get errors, remove this whole "deploy:" section and it will run on CPU.
-
   backend:
     build: ./garvis-backend
     container_name: garvis-backend
@@ -22,7 +9,6 @@ services:
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /secrets/adc.json
       GOOGLE_CLOUD_QUOTA_PROJECT: ${GOOGLE_CLOUD_QUOTA_PROJECT}
-      OLLAMA_BASE_URL: http://0.0.0.0:11434
     volumes:
       - ${ADC_PATH}:/secrets/adc.json:ro
     depends_on:
@@ -39,6 +25,14 @@ services:
     depends_on:
       - backend
 
-
+  ollama:
+    image: ollama/ollama:latest
+    container_name: garvis-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    # If your Docker host supports NVIDIA GPU passthrough, this enables it.
+    # If you get errors, remove this whole "deploy:" section and it will run on CPU.
 volumes:
   ollama:
