@@ -102,7 +102,7 @@ export const DoctorListSchema = z.array(DoctorSchema);
 /* ======== CalendarEntry ======== */
 
 export const CalendarEntrySchema = z.object({
-    calendar_id: z.number(),
+    calendar_id: z.number().nullable(),
     doctor_id: z.number().nullable(),
     patient_id: z.number().nullable(),
 
