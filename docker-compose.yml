@@ -37,10 +37,10 @@ services:
     volumes:
       - ollama:/root/.ollama
 
-    # gpus:
-    #   - driver: nvidia
-    #     count: all
-    #     capabilities: [gpu]
+    gpus:
+      - driver: nvidia
+        count: all
+        capabilities: [gpu]
 
     entrypoint: ["/bin/sh", "-lc"]
     command: >
