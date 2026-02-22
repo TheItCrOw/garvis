@@ -1,16 +1,4 @@
 .vscode/
 garvis-backend/uv.lock
-
 garvis-backend/app/services/graph_visualization/
-
-langgraph-lab/root/
-langgraph-lab/01. control-flow/*.ipynb_checkpoints
-langgraph-lab/02. agents/*.ipynb_checkpoints
-langgraph-lab/02. agents/logs/
-langgraph-lab/02. agents/data/
-langgraph-lab/02. agents/vectorized_data/
-langgraph-lab/03. duck-db-integration/*.ipynb_checkpoints
-langgraph-lab/05. sql agents/*.ipynb_checkpoints
-
 .env
-
