@@ -9,6 +9,8 @@ services:
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /secrets/adc.json
       GOOGLE_CLOUD_QUOTA_PROJECT: ${GOOGLE_CLOUD_QUOTA_PROJECT}
+      OLLAMA_BASE_URL: http://ollama:11434
+
     volumes:
       - ${ADC_PATH}:/secrets/adc.json:ro
     depends_on:
@@ -30,9 +32,31 @@ services:
     container_name: garvis-ollama
     ports:
       - "11434:11434"
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
     volumes:
       - ollama:/root/.ollama
-    # If your Docker host supports NVIDIA GPU passthrough, this enables it.
-    # If you get errors, remove this whole "deploy:" section and it will run on CPU.
+
+    gpus:
+      - driver: nvidia
+        count: all
+        capabilities: [gpu]
+
+    entrypoint: ["/bin/sh", "-lc"]
+    command: >
+      '
+      ollama serve &
+      pid=$!;
+      echo "Waiting for server...";
+      until ollama list >/dev/null 2>&1; do sleep 2; done;
+
+      echo "Pulling models (cached if already present)...";
+      ollama pull thiagomoraes/medgemma-4b-it:Q4_K_M || true;
+      ollama pull MedAIBase/MedGemma1.5:4b || true;
+
+      echo "Server ready.";
+      wait $pid
+      '
+
 volumes:
   ollama:
