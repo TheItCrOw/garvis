@@ -44,7 +44,7 @@ Once you've setup your cloud, api keys and env parameters, run the docker compos
 docker compose up --build
 ```
 
+## Setup Development
 
-### Running the application
+If you want to properly setup the repo, clone it and read through the respective `README` files of the projects.
 
-On
