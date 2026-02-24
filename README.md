@@ -30,7 +30,7 @@ Finally, create a `.env` file in this root folder to set the following parameter
 
 ```
 GOOGLE_CLOUD_QUOTA_PROJECT=[YOUR_BILLING_PROJECT]
-ADC_PATH=$HOME/.config/gcloud/application_default_credentials.json
+ADC_PATH=/path/to/application_default_credentials.json
 
 VITE_BACKEND_WS_URL=ws://localhost:8000/ws/audio
 VITE_API_BASE=http://localhost:8000/api
