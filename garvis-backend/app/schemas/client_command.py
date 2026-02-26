@@ -9,7 +9,6 @@ class ClientCommand(BaseModel):
     intent_confidence: float = Field(0.75, ge=0.0, le=1.0)
     reasoning_short: str = Field("", description="1 short sentence rationale; no private or sensitive data.")
 
-#I admit i didnt write this, but im already pulling my hair on how to make structuredoutput work with Gemini
 CLIENT_COMMAND_RAW_SCHEMA= {
    "title": "LangGraphStructuredOutput",
    "type": "object",
